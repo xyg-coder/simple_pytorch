@@ -1,7 +1,7 @@
-# include <iostream>
-# include "Tensor.h"
+#include "Allocator.h"
+# include "CpuAllocator.h"
 
 int main() {
-    simpletorch::Tensor tensor(123);
-    std::cout << tensor.get_value() << std::endl;
+    c10::NaiveCpuAllocator allocator;
+    c10::UniqueDataPtr dataPtr = allocator.allocate(100 * sizeof(int));
 }

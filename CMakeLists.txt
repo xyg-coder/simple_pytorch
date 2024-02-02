@@ -3,6 +3,9 @@ project(TestTensor)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# output compile_commands.json to be used by IDE
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  
+
 file(GLOB SOURCES src/*.cpp)
 
 set(INCLUDES src)
