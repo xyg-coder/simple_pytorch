@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <memory>
 namespace c10 {
 
@@ -15,6 +14,10 @@ class UniqueDataPtr final{
 public:
     UniqueDataPtr(void* data): data_(data), ctx_(nullptr, &deleteNothing) {};
     UniqueDataPtr(void* data, void* ctx, DeleteFnPtr deleteFn): data_(data), ctx_(ctx, deleteFn) {};
+    void* get_data() {
+        return data_;
+    }
+
 private:
     void* data_;
     // the deleter is guaranteed to be called when the unique pointer is destructed and the context is not null
@@ -24,7 +27,7 @@ private:
 
 class Allocator {
 public:
-    virtual UniqueDataPtr allocate(size_t n) const = 0;
+    virtual UniqueDataPtr allocate(int64_t n) const = 0;
     virtual ~Allocator() = default;
 };
 }

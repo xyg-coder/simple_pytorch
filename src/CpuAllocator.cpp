@@ -1,8 +1,7 @@
 #include "CpuAllocator.h"
 #include "Allocator.h"
-#include <algorithm>
-#include <cstddef>
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 
 void deleteNaiveCpuData(void *data) {
@@ -13,7 +12,7 @@ void deleteNaiveCpuData(void *data) {
     }
 }
 
-c10::UniqueDataPtr c10::NaiveCpuAllocator::allocate(size_t n) const {
+c10::UniqueDataPtr c10::NaiveCpuAllocator::allocate(int64_t n) const {
     // currently only suppport int size
     assert(n % sizeof(int) == 0);
     int* arr = new int[n / sizeof(int)];

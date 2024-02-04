@@ -6,7 +6,6 @@ namespace c10 {
 
 class NaiveCpuAllocator : public Allocator {
 public:
-    UniqueDataPtr allocate(size_t n) const;
-    ~NaiveCpuAllocator() {};
+    UniqueDataPtr allocate(int64_t n) const override;
 };
 }
