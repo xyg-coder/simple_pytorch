@@ -1,9 +1,11 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 namespace c10 {
 
-using DeleteFnPtr = void (*)(void *);
+// use std::function instead of function pointer: this provides ability to add hooks (see allocator_test.cpp for one example)
+using DeleteFnPtr = std::function<void(void*)>;
 
 void deleteNothing(void*);
 
@@ -22,7 +24,6 @@ private:
     void* data_;
     // the deleter is guaranteed to be called when the unique pointer is destructed and the context is not null
     std::unique_ptr<void, DeleteFnPtr> ctx_;
-
 };
 
 class Allocator {

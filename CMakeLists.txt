@@ -26,15 +26,15 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(
-  tensor_test
+  allocator_test
   ${SOURCES}
-  test/tensor_test.cpp
+  test/allocator_test.cpp
 )
-target_include_directories(tensor_test PRIVATE ${INCLUDES})
+target_include_directories(allocator_test PRIVATE ${INCLUDES})
 target_link_libraries(
-  tensor_test
+  allocator_test
   GTest::gtest_main
 )
 
 include(GoogleTest)
-gtest_discover_tests(tensor_test)
+gtest_discover_tests(allocator_test)
