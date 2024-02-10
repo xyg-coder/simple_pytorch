@@ -7,14 +7,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  
 
 file(GLOB SOURCES src/*.cpp)
+file(GLOB UTILS src/utils/*.cpp)
 
 set(INCLUDES src)
 find_package (glog 0.6.0 REQUIRED)
 
 add_executable(TestTensorExecutable ${SOURCES} example/tensor_exp.cpp)
+add_executable(TestThreadPool ${SOURCES} ${UTILS} example/test_thread_pool.cpp)
 target_link_libraries (TestTensorExecutable glog::glog)
+target_link_libraries (TestThreadPool glog::glog)
 
 target_include_directories(TestTensorExecutable PRIVATE ${INCLUDES})
+target_include_directories(TestThreadPool PRIVATE ${INCLUDES})
 
 include(FetchContent)
 FetchContent_Declare(
