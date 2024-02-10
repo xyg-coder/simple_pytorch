@@ -4,8 +4,11 @@
 #include "Tensor.h"
 #include "TensorImpl.h"
 #include <memory>
+#include <glog/logging.h>
 
-int main() {
+int main(int argc, char* argv[]) {
+    google::InitGoogleLogging(argv[0]);
+
     c10::NaiveCpuAllocator allocator;
 
     simpletorch::Storage storage(

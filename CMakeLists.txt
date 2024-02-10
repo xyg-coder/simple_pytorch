@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
 project(TestTensor)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -9,8 +9,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 file(GLOB SOURCES src/*.cpp)
 
 set(INCLUDES src)
+find_package (glog 0.6.0 REQUIRED)
 
 add_executable(TestTensorExecutable ${SOURCES} example/tensor_exp.cpp)
+target_link_libraries (TestTensorExecutable glog::glog)
 
 target_include_directories(TestTensorExecutable PRIVATE ${INCLUDES})
 
@@ -35,6 +37,7 @@ target_link_libraries(
   allocator_test
   GTest::gtest_main
 )
+target_link_libraries (allocator_test glog::glog)
 
 include(GoogleTest)
 gtest_discover_tests(allocator_test)

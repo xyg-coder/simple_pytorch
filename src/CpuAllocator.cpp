@@ -2,13 +2,13 @@
 #include "Allocator.h"
 #include <cassert>
 #include <cstdint>
-#include <iostream>
+#include <glog/logging.h>
 
 void c10::deleteNaiveCpuData(void *data) {
     if (data != nullptr) {
         int *typedArrayPtr = static_cast<int*>(data);
         delete[] typedArrayPtr;
-        std::cout << "deleteNaiveCpuData is called" << std::endl;
+        LOG(INFO) << "deleteNaiveCpuData is called";
     }
 }
 

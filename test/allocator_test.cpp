@@ -36,7 +36,7 @@ void helper_for_copy(int &count) {
 // Demonstrate some basic assertions.
 TEST(AllocationTest, DataDestructor) {
 
-  int count;
+  int count = 0;
   c10::DeleteFnPtr delete_fn = [&count](void *data) {
     count++;
     c10::deleteNaiveCpuData(data);
