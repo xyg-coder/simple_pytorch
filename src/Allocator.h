@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Device.h"
+#include "DeviceType.h"
 #include <functional>
 #include <memory>
 namespace c10 {
@@ -14,6 +16,7 @@ void deleteNothing(void*);
 // device is for its data.
 class UniqueDataPtr final{
 public:
+    UniqueDataPtr(): data_(nullptr), ctx_(nullptr, &deleteNothing) {};
     UniqueDataPtr(void* data): data_(data), ctx_(nullptr, &deleteNothing) {};
     UniqueDataPtr(void* data, void* ctx, DeleteFnPtr deleteFn): data_(data), ctx_(ctx, deleteFn) {};
     void* get_data() {
@@ -26,9 +29,23 @@ private:
     std::unique_ptr<void, DeleteFnPtr> ctx_;
 };
 
+class DataPtr {
+public:
+    DataPtr(): ptr_(), device_(DeviceType::CPU) {};
+    DataPtr(void* data, DeviceType device): ptr_(data), device_(device) {};
+    DataPtr(void* data, void* ctx, DeleteFnPtr deleteFn, DeviceType device): ptr_(data, ctx, deleteFn), device_(device) {};
+    void *get_data() {
+        return ptr_.get_data();
+    }
+private:    
+    UniqueDataPtr ptr_;
+    Device device_;
+};
+
+
 class Allocator {
 public:
-    virtual UniqueDataPtr allocate(int64_t n) const = 0;
+    virtual DataPtr allocate(int64_t n) const = 0;
     virtual ~Allocator() = default;
 };
 }

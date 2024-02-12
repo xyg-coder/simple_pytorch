@@ -17,7 +17,7 @@ public:
 
     StorageImpl(
         int64_t size_bytes,
-        c10::UniqueDataPtr&& data_ptr,
+        c10::DataPtr&& data_ptr,
         c10::Allocator* allocator)
         : size_bytes_(size_bytes), data_ptr_(std::move(data_ptr)), allocator_(allocator) {};
     
@@ -25,7 +25,7 @@ public:
         :size_bytes_(size_bytes), data_ptr_(std::move(allocator->allocate(size_bytes))), allocator_(allocator) {}
     ~StorageImpl()=default;
 private:
-    c10::UniqueDataPtr data_ptr_;
+    c10::DataPtr data_ptr_;
     int64_t size_bytes_;
     c10::Allocator* allocator_;
 };
