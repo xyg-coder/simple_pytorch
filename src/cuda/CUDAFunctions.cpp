@@ -6,7 +6,7 @@
 #include <glog/logging.h>
 #include <stdexcept>
 
-cudaError_t GetDeviceCount(int* dev_count) {
+cudaError_t c10::cuda::GetDeviceCount(int* dev_count) {
   return cudaGetDeviceCount(dev_count);
 }
 

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+# to be added back when we add .cu files
 # project(SimpleTorch LANGUAGES CUDA CXX)
 
 include(CheckLanguage)
@@ -19,11 +20,11 @@ find_package (glog 0.6.0 REQUIRED)
 set (CMAKE_PREFIX_PATH "/usr/local/cuda" "${CMAKE_PREFIX_PATH}")  
 find_package(CUDA REQUIRED)
 
-include_directories(${CUDA_INCLUDE_DIRS})  
 
 add_executable(TestTensorExecutable ${SOURCES} example/tensor_exp.cpp)
 add_executable(TestCudaContext ${SOURCES} ${CUDA_SRC} ${UTILS} example/test_cuda_context.cpp)
 add_executable(TestThreadPool ${SOURCES} ${UTILS} example/test_thread_pool.cpp)
+include_directories(${CUDA_INCLUDE_DIRS})  
 target_link_libraries (TestTensorExecutable glog::glog)
 target_link_libraries (TestThreadPool glog::glog)
 target_link_libraries (TestCudaContext glog::glog ${CUDA_LIBRARIES})
