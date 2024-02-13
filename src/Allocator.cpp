@@ -1,3 +1,3 @@
 #include "Allocator.h"
 
-void deleteNothing(void*) {}
+void c10::deleteNothing(void*) {}

@@ -1,18 +1,19 @@
 #include "cuda/CUDAHooks.h"
 #include "cuda/CUDAFunctions.h"
+#include "cuda/CudaAllocator.h"
 #include <glog/logging.h>
 
 namespace c10::cuda {
 int CUDAHooks::getNumGPUs() const {
-  return c10::cuda::device_count();
+  return device_count();
 }
 
 void CUDAHooks::initCUDA() const {
-  LOG(ERROR) << "we should call c10::cuda::CUDACachingAllocator::init(num_devices); in the init";
-  c10::cuda::device_count_ensure_non_zero();
+  device_count_ensure_non_zero();
+  cuda_allocator::get()->init(getNumGPUs());
 }
 
 bool CUDAHooks::hasCUDA() const {
-  return c10::cuda::device_count() > 0;
+  return device_count() > 0;
 }
 }
