@@ -21,17 +21,20 @@ set (CMAKE_PREFIX_PATH "/usr/local/cuda" "${CMAKE_PREFIX_PATH}")
 find_package(CUDA REQUIRED)
 
 
-add_executable(TestTensorExecutable ${SOURCES} example/tensor_exp.cpp)
+add_executable(TestTensorExecutable ${SOURCES} ${UTILS} example/tensor_exp.cpp)
 add_executable(TestCudaContext ${SOURCES} ${CUDA_SRC} ${UTILS} example/test_cuda_context.cpp)
 add_executable(TestThreadPool ${SOURCES} ${UTILS} example/test_thread_pool.cpp)
+add_executable(TestException ${UTILS} example/test_exception.cpp)
 include_directories(${CUDA_INCLUDE_DIRS})  
 target_link_libraries (TestTensorExecutable glog::glog)
 target_link_libraries (TestThreadPool glog::glog)
 target_link_libraries (TestCudaContext glog::glog ${CUDA_LIBRARIES})
+target_link_libraries (TestException glog::glog)
 
 target_include_directories(TestTensorExecutable PRIVATE ${INCLUDES})
 target_include_directories(TestThreadPool PRIVATE ${INCLUDES})
 target_include_directories(TestCudaContext PRIVATE ${INCLUDES})
+target_include_directories(TestException PRIVATE ${INCLUDES})
 
 include(FetchContent)
 FetchContent_Declare(
@@ -47,6 +50,7 @@ enable_testing()
 add_executable(
   allocator_test
   ${SOURCES}
+  ${UTILS}
   test/allocator_test.cpp
 )
 target_include_directories(allocator_test PRIVATE ${INCLUDES})

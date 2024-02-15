@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Device.h"
-#include <stdexcept>
+#include "utils/Exception.h"
 
 namespace c10::cuda {
 
@@ -11,7 +10,7 @@ struct CUDAHooksInterface {
     return 0;
   }
   virtual void initCUDA() const {
-    throw std::logic_error("CUDAHooks didn't implement init cuda");
+    C10_THROW_ERROR(NotImplementedError, "CUDAHooks didn't implement init cuda");
   }
   virtual bool hasCUDA() const {
     return false;

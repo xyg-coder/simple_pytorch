@@ -1,7 +1,7 @@
 #include "Device.h"
 #include "DeviceType.h"
+#include "utils/Exception.h"
 #include <glog/logging.h>
-#include <stdexcept>
 
 namespace c10 {
 std::string Device::str() const {
@@ -19,11 +19,9 @@ std::ostream& operator<<(std::ostream& stream, const Device& device) {
 }
 
 void Device::validate() {
-  if (index_ < -1) {
-    throw std::invalid_argument("Device index must be -1 or non negative, but got " + std::to_string(index_));
-  } 
-  if (type_ == DeviceType::CPU && (index_ != 0 && index_ != -1)) {
-    throw std::invalid_argument("Device index must be -1 or non negative, but got " + std::to_string(index_));
-  }
+  TORCH_CHECK_WITH(InvalidArgumentError, index_ >= -1, "Device index must be -1 or non negative, but got " + std::to_string(index_));
+  TORCH_CHECK_WITH(InvalidArgumentError,
+    !(type_ == DeviceType::CPU && (index_ != 0 && index_ != -1)),
+    "Device index must be -1 or non negative, but got " + std::to_string(index_));
 }
 }
