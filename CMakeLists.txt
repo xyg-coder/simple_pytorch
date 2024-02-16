@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.17)
 # to be added back when we add .cu files
 # project(SimpleTorch LANGUAGES CUDA CXX)
 
@@ -10,32 +10,32 @@ set(CMAKE_CXX_STANDARD 17)
 # output compile_commands.json to be used by IDE
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  
 
-file(GLOB SOURCES src/*.cpp)
-file(GLOB UTILS src/utils/*.cpp)
-file(GLOB CUDA_SRC src/cuda/*.cpp)
+file(GLOB SOURCES src/*.cpp src/utils/*.cpp src/cuda/*.cpp)  
 
 set(INCLUDES src)
-find_package (glog 0.6.0 REQUIRED)
-
 set (CMAKE_PREFIX_PATH "/usr/local/cuda" "${CMAKE_PREFIX_PATH}")  
+
+find_package (glog 0.6.0 REQUIRED)
 find_package(CUDA REQUIRED)
 
+set(ALL_LIBS glog::glog ${CUDA_LIBRARIES} ${CUDA_rt_LIBRARY})
 
-add_executable(TestTensorExecutable ${SOURCES} ${UTILS} example/tensor_exp.cpp)
-add_executable(TestCudaContext ${SOURCES} ${CUDA_SRC} ${UTILS} example/test_cuda_context.cpp)
-add_executable(TestThreadPool ${SOURCES} ${UTILS} example/test_thread_pool.cpp)
-add_executable(TestException ${UTILS} example/test_exception.cpp)
+add_executable(TestTensorExecutable ${SOURCES} example/tensor_exp.cpp)
+add_executable(TestCudaContext ${SOURCES} example/test_cuda_context.cpp)
+add_executable(TestThreadPool ${SOURCES} example/test_thread_pool.cpp)
+add_executable(TestException ${SOURCES} example/test_exception.cpp)
 include_directories(${CUDA_INCLUDE_DIRS})  
-target_link_libraries (TestTensorExecutable glog::glog)
-target_link_libraries (TestThreadPool glog::glog)
-target_link_libraries (TestCudaContext glog::glog ${CUDA_LIBRARIES})
-target_link_libraries (TestException glog::glog)
+target_link_libraries (TestTensorExecutable ${ALL_LIBS})
+target_link_libraries (TestThreadPool ${ALL_LIBS})
+target_link_libraries (TestCudaContext ${ALL_LIBS})
+target_link_libraries (TestException ${ALL_LIBS})
 
 target_include_directories(TestTensorExecutable PRIVATE ${INCLUDES})
 target_include_directories(TestThreadPool PRIVATE ${INCLUDES})
 target_include_directories(TestCudaContext PRIVATE ${INCLUDES})
 target_include_directories(TestException PRIVATE ${INCLUDES})
 
+# TEST
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -50,7 +50,6 @@ enable_testing()
 add_executable(
   allocator_test
   ${SOURCES}
-  ${UTILS}
   test/allocator_test.cpp
 )
 target_include_directories(allocator_test PRIVATE ${INCLUDES})
@@ -58,7 +57,7 @@ target_link_libraries(
   allocator_test
   GTest::gtest_main
 )
-target_link_libraries (allocator_test glog::glog)
+target_link_libraries (allocator_test ${ALL_LIBS})
 
 include(GoogleTest)
 gtest_discover_tests(allocator_test)

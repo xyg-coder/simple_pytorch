@@ -100,3 +100,6 @@ inline const char* torchCheckMsgImpl(
 
 #define TORCH_CHECK_WITH(err_type, cond, ...) \
   TORCH_CHECK_WITH_MSG(err_type, cond, "", __VA_ARGS__)
+
+#define TORCH_CHECK(cond, ...)\
+  TORCH_CHECK_WITH(Error, cond, __VA_ARGS__)
