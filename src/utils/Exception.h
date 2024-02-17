@@ -63,6 +63,10 @@ class InvalidArgumentError : public Error {
   using Error::Error;
 };
 
+class OutOfMemoryError : public Error {
+  using Error::Error;
+};
+
 template <typename... Args>
 decltype(auto) torchCheckMsgImpl(const char* /*msg*/, const Args&... args) {
   return str(args...);
@@ -77,14 +81,23 @@ inline const char* torchCheckMsgImpl(
   return args;
 }
 
+void torchCheckFail(
+    const char* func,
+    const char* file,
+    uint32_t line,
+    const std::string& msg);
+
+void torchCheckFail(
+    const char* func,
+    const char* file,
+    uint32_t line,
+    const char* msg);
 }
 
 #define TORCH_CHECK_MSG(cond, type, ...)                   \
   (::c10::torchCheckMsgImpl(                               \
       "Expected " #cond                                    \
-      " to be true, but got false.  "                      \
-      "(Could this error message be improved?  If so, "    \
-      "please report an enhancement request to PyTorch.)", \
+      " to be true, but got false.  ",                     \
       ##__VA_ARGS__))
 
 #define C10_UNLIKELY_OR_CONST(e) C10_UNLIKELY(e)
@@ -101,5 +114,11 @@ inline const char* torchCheckMsgImpl(
 #define TORCH_CHECK_WITH(err_type, cond, ...) \
   TORCH_CHECK_WITH_MSG(err_type, cond, "", __VA_ARGS__)
 
-#define TORCH_CHECK(cond, ...)\
-  TORCH_CHECK_WITH(Error, cond, __VA_ARGS__)
+#define TORCH_CHECK(cond, ...)                     \
+  if (C10_UNLIKELY_OR_CONST(!(cond))) {            \
+    ::c10::torchCheckFail(                         \
+        __func__,                                  \
+        __FILE__,                                  \
+        static_cast<uint32_t>(__LINE__),           \
+        TORCH_CHECK_MSG(cond, "", ##__VA_ARGS__)); \
+  }

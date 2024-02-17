@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "utils/thread_pool.h"
+#include "utils/Logging.h"
 
 
 namespace c10 {
@@ -19,7 +20,7 @@ size_t TaskThreadPoolBase::default_num_threads() {
 }
 
 void ThreadPool::main_loop(size_t index) {
-    LOG(INFO) << "thread pool start to run";
+    LOG_INFO("thread pool start to run");
     std::unique_lock<std::mutex> lock(mutex_);
     while (is_running_) {
         condition_.wait(lock, [&](){return !tasks_.empty() || !is_running_;});
@@ -34,9 +35,9 @@ void ThreadPool::main_loop(size_t index) {
             try {
                 tasks.task_body();
             } catch(const std::exception& e) {
-                LOG(ERROR) << "Exception in thread pool task: " << e.what();
+                LOG_ERROR("Exception in thread pool task: ", e.what());
             } catch (...) {
-                LOG(ERROR) << "Exception in thread pool task: unknown";
+                LOG_ERROR("Exception in thread pool task: unknown");
             }
         }
         lock.lock();
@@ -72,9 +73,9 @@ ThreadPool::~ThreadPool() {
         try {
             t.join();
         } catch (const std::exception& e) {
-            LOG(ERROR) << "thread termination error " << e.what();
+            LOG_ERROR("thread termination error ", e.what());
         }
     } 
-    LOG(INFO) << "thread pool ends";
+    LOG_INFO("thread pool ends");
 }
 }

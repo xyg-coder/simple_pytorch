@@ -1,9 +1,10 @@
 #include "Context.h"
+#include "utils/Logging.h"
 #include <glog/logging.h>
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   simpletorch::globalContext().lazyInitCUDA();
 
-  LOG(INFO) << "number of gpus: " << simpletorch::globalContext().getNumGPUs();
+  LOG_INFO("number of gpus: ", simpletorch::globalContext().getNumGPUs());
 }

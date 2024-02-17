@@ -2,6 +2,7 @@
 #include "Device.h"
 #include "cuda/CUDAException.h"
 #include "macros/Macros.h"
+#include "utils/Logging.h"
 #include <exception>
 #include <glog/logging.h>
 #include <stdexcept>
@@ -45,7 +46,7 @@ c10::DeviceIndex c10::cuda::device_count() noexcept {
       auto result = device_count_impl(false);
       return result;
     } catch(std::exception& e) {
-      LOG(ERROR) << "count device error, We silenced the error here";
+      LOG_ERROR("count device error, We silenced the error here");
       return 0;
     }
   }();
