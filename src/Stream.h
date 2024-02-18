@@ -42,4 +42,6 @@ private:
     return id_;
   }
 };
+
+std::ostream& operator<<(std::ostream& stream, const Stream& s);
 };

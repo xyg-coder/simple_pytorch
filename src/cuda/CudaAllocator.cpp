@@ -70,6 +70,7 @@ struct CudaMallocAsyncAllocator : public CUDAAllocator {
     const auto dufs = getStreamFromPool();
     dummy_unifying_free_streams[device] = UsageStream(
       dufs.stream(), dufs.device_index());
+    
 
     device_used_bytes[device] = 0;
     device_memory_limits[device] = UINT64_MAX;
