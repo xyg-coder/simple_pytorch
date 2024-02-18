@@ -1,22 +1,39 @@
+#include <atomic>
 #include <cstdint>
 #include <cuda_runtime.h>
 #include <memory>
 #include <sys/types.h>
 #include "cuda/CUDAStream.h"
 #include "Device.h"
+#include "DeviceType.h"
 #include "Stream.h"
 #include "cuda/CUDAException.h"
 #include "cuda/CUDAFunctions.h"
 #include "cuda/CudaGuard.h"
+#include "macros/CUDAMacros.h"
 #include "utils/CallOnce.h"
 #include "utils/Exception.h"
+#include "utils/Logging.h"
 
 namespace c10::cuda {
 namespace {
 static c10::OnceFlag init_flag;
 static DeviceIndex num_gpus = -1;
+static int least_priority = -1;
+// this highest_priority has already capped by max_compile_time_stream_priorities
+static int highest_priority = -1;
 static int max_stream_priorities;
+static constexpr int kStreamsPerPoolBits = 5;
+static constexpr int kStreamsPerPool = 1 << kStreamsPerPoolBits;
 static constexpr int kStreamTypeBits = 4;
+static constexpr unsigned int kDefaultFlags = cudaStreamNonBlocking;
+
+static c10::OnceFlag device_flags[C10_COMPILE_TIME_MAX_GPUS];
+static cudaStream_t streams[max_compile_time_stream_priorities]
+  [C10_COMPILE_TIME_MAX_GPUS][kStreamsPerPool];
+
+static std::atomic<uint32_t> priority_counters[max_compile_time_stream_priorities]
+  [C10_COMPILE_TIME_MAX_GPUS];
 
 // Thread-local current streams
 static thread_local std::unique_ptr<StreamId[]> current_stream = nullptr;
@@ -111,16 +128,18 @@ std::ostream& operator<<(std::ostream& stream, StreamIdType s) {
 static void initGlobalStreamState() {
   num_gpus = c10::cuda::device_count();
   TORCH_CHECK(num_gpus > 0, "There is no gpu found");
-  int leastPriority = -1, greatestPriority = -1;
-  C10_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(&leastPriority, &greatestPriority));
-  auto range = leastPriority - greatestPriority + 1;
+  C10_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(&least_priority, &highest_priority));
+  auto range = least_priority - highest_priority + 1;
   max_stream_priorities = range >= c10::cuda::max_compile_time_stream_priorities
     ? c10::cuda::max_compile_time_stream_priorities
     : range;
+  highest_priority = least_priority - range + 1;
+  LOG_INFO("cuda stream building, least priority: ", least_priority,
+    ", highest priority", highest_priority);
 }
 
 static void initCUDAStreamsOnce() {
-  c10::callOnce(init_flag, initCUDAStreamsOnce);
+  c10::callOnce(init_flag, initGlobalStreamState);
 
   if (current_stream) {
     return;
@@ -132,15 +151,79 @@ static void initCUDAStreamsOnce() {
   }
 }
 
+
+inline int priority_to_idx(int priority) {
+  int index = least_priority - priority;
+  return std::min(index, max_stream_priorities);
+}
+
+inline int idx_to_priority(int idx) {
+  return least_priority - idx;
+}
+
 static void initDeviceStreamState(DeviceIndex device_index) {
+  LOG_INFO("initDeviceStreamState, creating device streams");
   // Switches to the requested device so streams are properly associated
   // with it.
+  // CUDA apis are thread-safe, each threads are setting thread local device
   CudaGuard device_guard(device_index);
+  for (auto i = 0; i < kStreamsPerPool; ++i) {
+    for (auto j = 0; j < max_stream_priorities; ++j) {
+      auto& stream = streams[j][device_index][i];
+      // lower number is higher priority
+      C10_CUDA_CHECK(cudaStreamCreateWithPriority(
+        &stream, kDefaultFlags, idx_to_priority(j)));
+      
+      // initialize
+      priority_counters[j][device_index] = 0;
+    }
+  }
+  LOG_INFO("initDeviceStreamState, creating device streams done");
+}
+
+// Helper to verify the GPU index is valid
+static inline void check_gpu(DeviceIndex device_index) {
+  TORCH_CHECK(device_index >= 0 && device_index < num_gpus);
+}
+
+// Helper to determine the index of the stream to return
+// Note: Streams are returned round-robin (see note in CUDAStream.h)
+static uint32_t get_idx(std::atomic<uint32_t>& counter) {
+  auto raw_idx = counter++;
+  return raw_idx % kStreamsPerPool;
+}
+
+CUDAStream cudaStreamForId(DeviceIndex device_index, StreamId stream_id) {
+  return CUDAStream(CUDAStream::UNCHECKED, 
+    c10::Stream(c10::Stream::UNSAFE, 
+    c10::Device(DeviceType::CUDA, device_index), stream_id));
+}
+
+
 }
 
 CUDAStream getStreamFromPool(const int priority, DeviceIndex device_index) {
   initCUDAStreamsOnce();
+  if (device_index == -1) {
+    device_index = current_device();
+    c10::cuda::SetTargetDevice();
+  }
+  TORCH_CHECK(priority <= 0, "Expected cuda stream priority to be less than or equal to 0, got ", priority);
+  check_gpu(device_index);
 
+  c10::callOnce(device_flags[device_index], initDeviceStreamState, device_index);
+
+  auto pri_idx = priority_to_idx(priority);
+  pri_idx =
+      std::min(pri_idx, max_stream_priorities - 1); // pri_idx is zero-based
+  const auto idx = get_idx(priority_counters[pri_idx][device_index]);
+  StreamIdType id_type = StreamIdType(pri_idx + 1);
+  return cudaStreamForId(device_index, makeStreamId(id_type, idx));
 }
+
+CUDAStream getStreamFromPool(const bool isHighPriority, DeviceIndex device) {
+  initCUDAStreamsOnce();
+  int priority = isHighPriority ? highest_priority : least_priority;
+  return getStreamFromPool(priority, device);
 }
 }

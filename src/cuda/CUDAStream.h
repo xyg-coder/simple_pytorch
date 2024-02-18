@@ -34,5 +34,6 @@ private:
   Stream stream_;
 };
 
+CUDAStream getStreamFromPool(const int priority, DeviceIndex device = -1);
 CUDAStream getStreamFromPool(const bool isHighPriority = false, DeviceIndex device = -1);
 };
