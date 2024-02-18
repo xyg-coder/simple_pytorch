@@ -1,4 +1,5 @@
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <cuda_runtime.h>
 #include <memory>
@@ -19,9 +20,6 @@ namespace c10::cuda {
 namespace {
 static c10::OnceFlag init_flag;
 static DeviceIndex num_gpus = -1;
-static int least_priority = -1;
-// this highest_priority has already capped by max_compile_time_stream_priorities
-static int highest_priority = -1;
 static int max_stream_priorities;
 static constexpr int kStreamsPerPoolBits = 5;
 static constexpr int kStreamsPerPool = 1 << kStreamsPerPoolBits;
@@ -105,6 +103,7 @@ public:
   }
 };
 
+// si is the index in the streams array
 StreamId makeStreamId(StreamIdType st, size_t si) {
   if (st.isDefault()) {
     return static_cast<StreamId>(0);
@@ -128,7 +127,9 @@ std::ostream& operator<<(std::ostream& stream, StreamIdType s) {
 static void initGlobalStreamState() {
   num_gpus = c10::cuda::device_count();
   TORCH_CHECK(num_gpus > 0, "There is no gpu found");
+  int least_priority = -1, highest_priority = -1;
   C10_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(&least_priority, &highest_priority));
+  TORCH_CHECK(least_priority == 0, "cuda stream least priority is not 0");
   auto range = least_priority - highest_priority + 1;
   max_stream_priorities = range >= c10::cuda::max_compile_time_stream_priorities
     ? c10::cuda::max_compile_time_stream_priorities
@@ -153,12 +154,12 @@ static void initCUDAStreamsOnce() {
 
 
 inline int priority_to_idx(int priority) {
-  int index = least_priority - priority;
+  int index = -priority;
   return std::min(index, max_stream_priorities);
 }
 
 inline int idx_to_priority(int idx) {
-  return least_priority - idx;
+  return -idx;
 }
 
 static void initDeviceStreamState(DeviceIndex device_index) {
@@ -199,7 +200,44 @@ CUDAStream cudaStreamForId(DeviceIndex device_index, StreamId stream_id) {
     c10::Device(DeviceType::CUDA, device_index), stream_id));
 }
 
+static StreamIdType streamIdType(StreamId sid) {
+  // Externally allocated streams have their id being the cudaStream_ptr
+  // so the last bit will be 0
+  if ((!(sid & 1)) && sid) {
+    return StreamIdType(StreamIdType::EXTERNAL);
+  }
+  int mask_for_type = (1 << kStreamTypeBits) - 1;
+  auto val = (sid >> 1) & mask_for_type;
+  // val == 0, default Stream, sid&1 should be 1
+  // val != 0, non-default stream
+  TORCH_CHECK(val || !(sid & 1), "invalid streamId", sid);
+  return StreamIdType(val);
+}
 
+static size_t streamIdIndex(StreamId stream_id) {
+  return static_cast<size_t>(
+    (stream_id >> (kStreamTypeBits + 1)) & ((1 << kStreamsPerPoolBits) - 1));
+}
+
+}
+
+cudaStream_t CUDAStream::stream() const {
+  c10::DeviceIndex device_index = stream_.device_index();
+  StreamId stream_id = stream_.id();
+  StreamIdType st = streamIdType(stream_id);
+  size_t si = streamIdIndex(stream_id);
+  if (st.isExternal()) {
+    return reinterpret_cast<cudaStream_t>(stream_id);
+  } else if (st.isDefault()) {
+    TORCH_CHECK(si == 0,
+      "Unrecognized strea ", stream_, " (defaul stream is not returning 0 index: ", si, ").");
+    return nullptr;
+  } else {
+    auto stream_type = st.getStreamType();
+    TORCH_CHECK(stream_type >= 1 && stream_type <= max_stream_priorities,
+      "Invalid streamType ", stream_type);
+    return streams[stream_type - 1][device_index][si];
+  }
 }
 
 CUDAStream getStreamFromPool(const int priority, DeviceIndex device_index) {
@@ -217,13 +255,14 @@ CUDAStream getStreamFromPool(const int priority, DeviceIndex device_index) {
   pri_idx =
       std::min(pri_idx, max_stream_priorities - 1); // pri_idx is zero-based
   const auto idx = get_idx(priority_counters[pri_idx][device_index]);
+  // this pool doesn't return default stream
   StreamIdType id_type = StreamIdType(pri_idx + 1);
   return cudaStreamForId(device_index, makeStreamId(id_type, idx));
 }
 
 CUDAStream getStreamFromPool(const bool isHighPriority, DeviceIndex device) {
   initCUDAStreamsOnce();
-  int priority = isHighPriority ? highest_priority : least_priority;
+  int priority = isHighPriority ? -max_stream_priorities + 1 : 0;
   return getStreamFromPool(priority, device);
 }
 }

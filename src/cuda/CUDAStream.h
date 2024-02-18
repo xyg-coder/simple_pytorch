@@ -4,6 +4,7 @@
 #include "DeviceType.h"
 #include "Stream.h"
 #include "utils/Exception.h"
+#include <cuda_runtime.h>
 namespace c10::cuda {
 static constexpr int max_compile_time_stream_priorities = 4;
 
@@ -26,9 +27,18 @@ public:
   bool operator!=(const CUDAStream& other) const noexcept {
     return unwrap() != other.unwrap();
   }
+
+  /// Explicit conversion to cudaStream_t.
+  cudaStream_t stream() const;
+
   /// Explicit conversion to Stream.
   Stream unwrap() const {
     return stream_;
+  }
+
+  /// Get the CUDA device index that this stream is associated with.
+  DeviceIndex device_index() const {
+    return stream_.device_index();
   }
 private:
   Stream stream_;

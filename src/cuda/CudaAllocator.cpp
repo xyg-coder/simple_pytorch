@@ -15,8 +15,22 @@ namespace c10::cuda {
 
 namespace {
 struct UsageStream {
-
+  cudaStream_t stream;
+  c10::DeviceIndex device;
+  UsageStream() = default;
+  UsageStream(cudaStream_t s, c10::DeviceIndex d) : stream(s), device(d) {}
+  UsageStream(const UsageStream& us) = default;
+  UsageStream(const UsageStream&& us) : stream(us.stream), device(us.device) {}
+  UsageStream& operator=(UsageStream other) {
+    stream = other.stream;
+    device = other.device;
+    return *this;
+  }
 };
+
+bool operator==(const UsageStream& lhs, const UsageStream& rhs) {
+  return (lhs.stream == rhs.stream) && (lhs.device == rhs.device);
+}
 }
 
 namespace cuda_allocator{
@@ -54,7 +68,8 @@ struct CudaMallocAsyncAllocator : public CUDAAllocator {
       mempool, cudaMemPoolReuseAllowInternalDependencies, &enable));
 
     const auto dufs = getStreamFromPool();
-    dummy_unifying_free_streams[device] = UsageStream();
+    dummy_unifying_free_streams[device] = UsageStream(
+      dufs.stream(), dufs.device_index());
 
     device_used_bytes[device] = 0;
     device_memory_limits[device] = UINT64_MAX;
