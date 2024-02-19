@@ -265,4 +265,14 @@ CUDAStream getStreamFromPool(const bool isHighPriority, DeviceIndex device) {
   int priority = isHighPriority ? -max_stream_priorities + 1 : 0;
   return getStreamFromPool(priority, device);
 }
+
+CUDAStream getCurrentCUDAStream(DeviceIndex device_index) {
+  initCUDAStreamsOnce();
+  if (device_index == -1) {
+    device_index = current_device();
+    c10::cuda::SetTargetDevice();
+  }
+  check_gpu(device_index);
+  return cudaStreamForId(device_index, current_stream[device_index]);
+}
 }
