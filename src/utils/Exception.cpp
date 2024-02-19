@@ -1,4 +1,5 @@
 #include "utils/Exception.h"
+#include "utils/Logging.h"
 #include "utils/StringUtils.h"
 #include <string>
 

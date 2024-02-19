@@ -53,20 +53,31 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
+set(TEST_LIBS ${ALL_LIBS} GTest::gtest_main)
 
 add_executable(
   allocator_test
   ${SOURCES}
   test/allocator_test.cpp
 )
+add_executable(
+  cuda_allocator_test
+  ${SOURCES}
+  test/cuda_allocator_test.cpp
+)
 target_include_directories(allocator_test PRIVATE ${INCLUDES})
+target_include_directories(cuda_allocator_test PRIVATE ${INCLUDES})
 target_link_libraries(
   allocator_test
-  GTest::gtest_main
+  ${TEST_LIBS}
 )
-target_link_libraries (allocator_test ${ALL_LIBS})
+target_link_libraries(
+  cuda_allocator_test
+  ${TEST_LIBS}
+)
 
 include(GoogleTest)
 gtest_discover_tests(allocator_test)
+gtest_discover_tests(cuda_allocator_test)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)

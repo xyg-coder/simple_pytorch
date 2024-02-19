@@ -91,8 +91,6 @@ cudaError_t c10::cuda::GetDevice(DeviceIndex *device) {
       "cudaGetDevice returns invalid device ",
       tmp_device);
     *device = static_cast<DeviceIndex>(tmp_device);
-    LOG_INFO("check cast, tmp_device=", tmp_device,
-      ", cast result=", static_cast<DeviceIndex>(tmp_device));
   }
   return err;
 }

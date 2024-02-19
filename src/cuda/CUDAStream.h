@@ -48,4 +48,8 @@ CUDAStream getStreamFromPool(const int priority, DeviceIndex device = -1);
 CUDAStream getStreamFromPool(const bool isHighPriority = false, DeviceIndex device = -1);
 
 CUDAStream getCurrentCUDAStream(DeviceIndex device_index = -1);
+
+// only for testing
+cudaStream_t danger_return_stream(size_t idx1, size_t idx2, size_t idx3);
+int max_stream_priority();
 };

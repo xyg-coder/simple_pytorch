@@ -27,8 +27,9 @@ static constexpr int kStreamTypeBits = 4;
 static constexpr unsigned int kDefaultFlags = cudaStreamNonBlocking;
 
 static c10::OnceFlag device_flags[C10_COMPILE_TIME_MAX_GPUS];
-static cudaStream_t streams[max_compile_time_stream_priorities]
+typedef cudaStream_t StreamArray[max_compile_time_stream_priorities]
   [C10_COMPILE_TIME_MAX_GPUS][kStreamsPerPool];
+static StreamArray streams;
 
 static std::atomic<uint32_t> priority_counters[max_compile_time_stream_priorities]
   [C10_COMPILE_TIME_MAX_GPUS];
@@ -155,7 +156,7 @@ static void initCUDAStreamsOnce() {
 
 inline int priority_to_idx(int priority) {
   int index = -priority;
-  return std::min(index, max_stream_priorities);
+  return std::min(index, max_stream_priorities - 1);
 }
 
 inline int idx_to_priority(int idx) {
@@ -252,8 +253,6 @@ CUDAStream getStreamFromPool(const int priority, DeviceIndex device_index) {
   c10::callOnce(device_flags[device_index], initDeviceStreamState, device_index);
 
   auto pri_idx = priority_to_idx(priority);
-  pri_idx =
-      std::min(pri_idx, max_stream_priorities - 1); // pri_idx is zero-based
   const auto idx = get_idx(priority_counters[pri_idx][device_index]);
   // this pool doesn't return default stream
   StreamIdType id_type = StreamIdType(pri_idx + 1);
@@ -274,5 +273,13 @@ CUDAStream getCurrentCUDAStream(DeviceIndex device_index) {
   }
   check_gpu(device_index);
   return cudaStreamForId(device_index, current_stream[device_index]);
+}
+
+cudaStream_t danger_return_stream(size_t idx1, size_t idx2, size_t idx3) {
+  return streams[idx1][idx2][idx3];
+}
+
+int max_stream_priority() {
+  return max_stream_priorities;
 }
 }

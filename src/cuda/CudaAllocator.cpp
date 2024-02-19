@@ -110,7 +110,8 @@ void mallocAsync(
   c10::DeviceIndex device,
   size_t size,
   cudaStream_t stream) {
-  TORCH_CHECK(0 <= device && device < device_count_, "Invalid device, ", device, ", device_count=", device_count_);
+  // need to use (int)device otherwise it will be interpreted as char
+  TORCH_CHECK(0 <= device && device < device_count_, "Invalid device, ", (int)device, ", device_count=", device_count_);
   CudaGuard g(device);
   std::lock_guard<std::mutex> lk(general_mutex);
 
@@ -154,6 +155,7 @@ inline void sync_raw(cudaStream_t dependency, cudaStream_t dependent) {
 }
 
 inline void free_impl(PtrInfo::iterator& it) {
+  LOG_INFO("trying to free cuda memory");
   const auto& recorded_streams = it->second.recorded_streams;
   const auto& creation_stream = it->second.creation_stream;
 
