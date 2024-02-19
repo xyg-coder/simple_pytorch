@@ -1,5 +1,7 @@
 #include "utils/Exception.h"
+#include "utils/Logging.h"
 #include "utils/StringUtils.h"
+#include <string>
 
 namespace c10 {
 Error::Error(SourceLocation source_location, std::string msg)
@@ -57,5 +59,21 @@ std::string Error::compute_what(bool include_backtrace) const {
   }
 
   return oss.str();
+}
+
+void torchCheckFail(
+    const char* func,
+    const char* file,
+    uint32_t line,
+    const char* msg) {
+  throw ::c10::Error({func, file, line}, msg);
+}
+
+void torchCheckFail(
+    const char* func,
+    const char* file,
+    uint32_t line,
+    const std::string& msg) {
+  throw ::c10::Error({func, file, line}, msg);
 }
 }

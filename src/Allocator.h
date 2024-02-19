@@ -33,7 +33,7 @@ class DataPtr {
 public:
     DataPtr(): ptr_(), device_(DeviceType::CPU) {};
     DataPtr(void* data, DeviceType device): ptr_(data), device_(device) {};
-    DataPtr(void* data, void* ctx, DeleteFnPtr deleteFn, DeviceType device): ptr_(data, ctx, deleteFn), device_(device) {};
+    DataPtr(void* data, void* ctx, DeleteFnPtr deleteFn, Device device): ptr_(data, ctx, deleteFn), device_(device) {};
     void *get_data() {
         return ptr_.get_data();
     }

@@ -1,5 +1,6 @@
 #include "CpuAllocator.h"
 #include "Allocator.h"
+#include "utils/Logging.h"
 #include <cassert>
 #include <cstdint>
 #include <glog/logging.h>
@@ -8,7 +9,7 @@ void c10::deleteNaiveCpuData(void *data) {
     if (data != nullptr) {
         int *typedArrayPtr = static_cast<int*>(data);
         delete[] typedArrayPtr;
-        LOG(INFO) << "deleteNaiveCpuData is called";
+        LOG_INFO("deleteNaiveCpuData is called");
     }
 }
 
