@@ -110,7 +110,7 @@ void mallocAsync(
   c10::DeviceIndex device,
   size_t size,
   cudaStream_t stream) {
-  TORCH_CHECK(0 <= device && device < device_count_, "Invalid device, ", device);
+  TORCH_CHECK(0 <= device && device < device_count_, "Invalid device, ", device, ", device_count=", device_count_);
   CudaGuard g(device);
   std::lock_guard<std::mutex> lk(general_mutex);
 
@@ -194,14 +194,13 @@ namespace cuda_allocator{
 
 
 struct CudaMallocAsyncAllocator : public CUDAAllocator {
-
-
-
   void init(int dev_count) override {
     static bool initialized = [](int dev_count){
       device_count_ = dev_count;
       device_memory_limits.resize(dev_count);
+      devs_initialized_flags.resize(dev_count);
       device_used_bytes.resize(dev_count);
+      dummy_unifying_free_streams.resize(dev_count);
       return true;
     }(dev_count);
   }

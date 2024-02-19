@@ -29,6 +29,7 @@ int device_count_impl(bool fail_if_no_driver) {
     default:
       throw std::logic_error(cudaGetErrorString(err));
   }
+  return count;
 }
 
 c10::DeviceIndex c10::cuda::device_count_ensure_non_zero() {
@@ -89,7 +90,9 @@ cudaError_t c10::cuda::GetDevice(DeviceIndex *device) {
       tmp_device >= 0 && tmp_device <= std::numeric_limits<DeviceIndex>::max(),
       "cudaGetDevice returns invalid device ",
       tmp_device);
-      *device = static_cast<DeviceIndex>(tmp_device);
+    *device = static_cast<DeviceIndex>(tmp_device);
+    LOG_INFO("check cast, tmp_device=", tmp_device,
+      ", cast result=", static_cast<DeviceIndex>(tmp_device));
   }
   return err;
 }

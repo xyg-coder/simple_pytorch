@@ -8,6 +8,10 @@ check_language(CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)  
 
+# right now for debugging
+# change in the future if needed
+set(CMAKE_BUILD_TYPE Debug)
+
 # output compile_commands.json to be used by IDE
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  
 
@@ -25,15 +29,18 @@ add_executable(TestTensorExecutable ${SOURCES} example/tensor_exp.cpp)
 add_executable(TestCudaContext ${SOURCES} example/test_cuda_context.cpp)
 add_executable(TestThreadPool ${SOURCES} example/test_thread_pool.cpp)
 add_executable(TestException ${SOURCES} example/test_exception.cpp)
+add_executable(TestAllocator ${SOURCES} example/test_allocator.cpp)
 target_link_libraries (TestTensorExecutable ${ALL_LIBS})
 target_link_libraries (TestThreadPool ${ALL_LIBS})
 target_link_libraries (TestCudaContext ${ALL_LIBS})
 target_link_libraries (TestException ${ALL_LIBS})
+target_link_libraries (TestAllocator ${ALL_LIBS})
 
 target_include_directories(TestTensorExecutable PRIVATE ${INCLUDES})
 target_include_directories(TestThreadPool PRIVATE ${INCLUDES})
 target_include_directories(TestCudaContext PRIVATE ${INCLUDES})
 target_include_directories(TestException PRIVATE ${INCLUDES})
+target_include_directories (TestAllocator PRIVATE ${INCLUDES})
 
 # TEST
 include(FetchContent)
