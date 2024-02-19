@@ -1,3 +1,9 @@
+#ifndef TESTING
+#define TESTING
+#include <cstddef>
+#include <cstdint>
+#endif
+
 #include "Device.h"
 #include <gtest/gtest.h>
 #include "Allocator.h"
@@ -59,4 +65,23 @@ TEST(cudaAllocator, call_several_times_get_from_pool) {
   EXPECT_EQ(stream_, c10::cuda::danger_return_stream(
     max_priority - 1, device,
     idx));
+}
+
+TEST(cudaAllocator, streamId) {
+  uint8_t type_int = 11;
+  size_t si = 12;
+  c10::StreamId sid = c10::cuda::makeStreamId(type_int, si);
+  EXPECT_EQ(c10::cuda::streamIdIndexTest(sid), si);
+  EXPECT_EQ(c10::cuda::streamTypeInt(sid), type_int);
+
+  // test default
+  // default stream sid should return 0 (because we are not storing it in the streams)
+  sid = c10::cuda::makeStreamId(0x0, si + 1);
+  EXPECT_EQ(c10::cuda::streamIdIndexTest(sid), 0);
+  EXPECT_EQ(c10::cuda::streamTypeInt(sid), 0x0);
+
+  // test external
+  sid = c10::cuda::makeStreamId(0xF, si + 2);
+  EXPECT_EQ(c10::cuda::streamIdIndexTest(sid), si + 2);
+  EXPECT_EQ(c10::cuda::streamTypeInt(sid), 0xF);
 }

@@ -4,6 +4,8 @@
 #include "DeviceType.h"
 #include "Stream.h"
 #include "utils/Exception.h"
+#include <cstddef>
+#include <cstdint>
 #include <cuda_runtime.h>
 namespace c10::cuda {
 static constexpr int max_compile_time_stream_priorities = 4;
@@ -49,7 +51,12 @@ CUDAStream getStreamFromPool(const bool isHighPriority = false, DeviceIndex devi
 
 CUDAStream getCurrentCUDAStream(DeviceIndex device_index = -1);
 
+#ifdef TESTING
 // only for testing
 cudaStream_t danger_return_stream(size_t idx1, size_t idx2, size_t idx3);
 int max_stream_priority();
+StreamId makeStreamId(uint8_t type_int, size_t si);
+size_t streamIdIndexTest(StreamId stream_id);
+uint8_t streamTypeInt(StreamId stream_id);
+#endif
 };

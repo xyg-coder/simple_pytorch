@@ -275,11 +275,24 @@ CUDAStream getCurrentCUDAStream(DeviceIndex device_index) {
   return cudaStreamForId(device_index, current_stream[device_index]);
 }
 
+// following functions are used by testing
 cudaStream_t danger_return_stream(size_t idx1, size_t idx2, size_t idx3) {
   return streams[idx1][idx2][idx3];
 }
 
 int max_stream_priority() {
   return max_stream_priorities;
+}
+
+StreamId makeStreamId(uint8_t type_int, size_t si) {
+  return makeStreamId(StreamIdType(type_int), si);
+}
+
+size_t streamIdIndexTest(StreamId stream_id) {
+  return streamIdIndex(stream_id);
+}
+
+uint8_t streamTypeInt(StreamId stream_id) {
+  return streamIdType(stream_id).getStreamType();
 }
 }
