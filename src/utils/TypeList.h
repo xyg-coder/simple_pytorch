@@ -7,9 +7,13 @@
 #include <utility>
 
 namespace c10::guts {
-namespace typelist {
+
+
 template <class... T>
 struct false_t: std::false_type {};
+
+namespace typelist {
+
 
 template <class T>
 struct is_function_type: std::false_type {};
@@ -54,7 +58,7 @@ template <size_t Index, class... Ts>
 struct element <Index, typelist<Ts...>> : std::false_type { };
 
 template <size_t Index, class Head, class... Ts>
-struct element <Index, typelist<Head, Ts...>> : element<Index - 1, Ts...> {};
+struct element <Index, typelist<Head, Ts...>> : element<Index - 1, typelist<Ts...>> {};
 
 /// Convenience alias.
 template <size_t Index, class TypeList>
@@ -84,7 +88,7 @@ struct take_elements<TypeList, offset, std::index_sequence<Indices...>> final {
 
 template <class TypeList, size_t num>
 struct take final {
-  static_assert(is_instantiation_of<Typelist, TypeList>::value,
+  static_assert(is_instantiation_of<typelist, TypeList>::value,
     "In typelist::take<T, num>, the T argument must be typelist<...>.");
   static_assert(num <= size<TypeList>::value,
     "Tried to typelist::take more elements than there are in the list");
@@ -111,6 +115,18 @@ struct drop_if_nonempty final {
 };
 template <class TypeList, size_t num>
 using drop_if_nonempty_t = typename drop_if_nonempty<TypeList, num>::type;
+
+// compare 2 lists of args
+template <class T1, class T2>
+struct arg_list_compare : std::is_same<T1, T2> {};
+
+template <class T1, class... TypeList1, class T2>
+struct arg_list_compare <typelist<T1, TypeList1...>, T2> : std::false_type {};
+
+template <class T1, class... TypeList1, class T2, class... TypeList2>
+struct arg_list_compare <typelist<T1, TypeList1...>, typelist<T2, TypeList2...>> {
+  static constexpr bool value = std::is_same_v<T1, T2> && arg_list_compare<typelist<TypeList1...>, typelist<TypeList2...>>::value;
+};
 
 } // namespace typelist
 } // namespace c10::guts

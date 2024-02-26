@@ -28,7 +28,7 @@ struct function_traits<Result(Args...)> {
 
 template <typename Result, typename Arglist>
 struct make_function_traits {
-  static_assert(std::false_type::value,
+  static_assert(false_t<Arglist>::value,
     "In guts::make_function_traits<Result, TypeList>, the ArgList argument must be typelist<...>.");
 };
 
@@ -59,4 +59,7 @@ template<typename Result, typename... Args>
 struct infer_function_traits<Result(Args...)> {
   using type = function_traits<Result(Args...)>;
 };
+
+template<typename T>
+using infer_function_traits_t = typename infer_function_traits<T>::type;
 }
