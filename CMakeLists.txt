@@ -65,14 +65,23 @@ add_executable(
   ${SOURCES}
   test/cuda_allocator_test.cpp
 )
+add_executable(
+  metaprogramming_test
+  test/metaprogramming_test.cpp
+)
 target_include_directories(allocator_test PRIVATE ${INCLUDES})
 target_include_directories(cuda_allocator_test PRIVATE ${INCLUDES})
+target_include_directories(metaprogramming_test PRIVATE ${INCLUDES})
 target_link_libraries(
   allocator_test
   ${TEST_LIBS}
 )
 target_link_libraries(
   cuda_allocator_test
+  ${TEST_LIBS}
+)
+target_link_libraries(
+  metaprogramming_test
   ${TEST_LIBS}
 )
 
