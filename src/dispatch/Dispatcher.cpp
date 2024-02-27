@@ -116,4 +116,39 @@ void Dispatcher::cleanup(const OperatorHandle& op, const OperatorName& op_name) 
   }
 }
 
+RegistrationHandleRAII Dispatcher::registerImpl(
+  OperatorName op_name, std::optional<DispatchKey> dispatch_key, KernelFunction kernel_function,
+  std::optional<CppSignature> cpp_signature, std::unique_ptr<FunctionSchema> inferred_function_schema,
+  std::string debug) {
+  std::lock_guard<std::mutex> lock(guard_->mutex);
+  auto op = findOrRegisterName_(op_name);
+  auto handle = op.operator_def_->op_.registerKernel(
+    *this,
+    dispatch_key,
+    std::move(kernel_function),
+    std::move(cpp_signature),
+    std::move(inferred_function_schema),
+    std::move(debug));
+  ++op.operator_def_->def_and_impl_count;
+  return RegistrationHandleRAII([
+    guard=this->guard_, this, op, op_name, dispatch_key, handle]{
+    std::lock_guard<std::mutex> lock(guard->mutex);
+    if (guard->alive.load()) {
+      return;
+    }
+    deregisterImpl_(op, op_name, dispatch_key, handle);
+  });
+}
+
+void Dispatcher::deregisterImpl_(const OperatorHandle& op,
+  const OperatorName& op_name, std::optional<DispatchKey> dispatch_key,
+  OperatorEntry::AnnotatedKernelContainerIterator iterator) {
+    
+  op.operator_def_->op_.deregisterKernel_(*this, dispatch_key, iterator);
+  TORCH_CHECK(op.operator_name() == op_name);
+  TORCH_CHECK(op.operator_def_->def_and_impl_count > 0);
+  --op.operator_def_->def_and_impl_count;
+  cleanup(op, op_name);
+}
+
 } // namespace c10

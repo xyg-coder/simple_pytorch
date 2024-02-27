@@ -66,6 +66,10 @@ public:
     return operator_def_->op_.schema();
   }
 
+  const OperatorName& operator_name() const {
+    return operator_def_->op_.operatorName();
+  }
+
 protected:
   explicit OperatorHandle(std::list<OperatorDef>::iterator operator_iterator)
     :operator_def_(&*operator_iterator),
@@ -149,7 +153,8 @@ private:
   void deregisterImpl_(
     const OperatorHandle& op,
     const OperatorName& op_name,
-    std::optional<DispatchKey> dispatch_key);
+    std::optional<DispatchKey> dispatch_key,
+    OperatorEntry::AnnotatedKernelContainerIterator iterator);
   
   OperatorHandle findOrRegisterName_(const OperatorName& op_name);
 

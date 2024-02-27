@@ -9,6 +9,7 @@
 #include "dispatch/OperatorName.h"
 #include "utils/Exception.h"
 #include <array>
+#include <memory>
 #include <optional>
 #include <string>
 namespace c10 {
@@ -18,6 +19,17 @@ struct AnnotatedSchema final {
   FunctionSchema schema_;
   std::string debug_;
 };
+
+struct AnnotatedKernel final {
+  AnnotatedKernel(KernelFunction&& k,
+    std::unique_ptr<FunctionSchema>&& s, std::string&& d)
+    :kernel(std::move(k)), inferred_function_schema(std::move(s)),
+    debug(std::move(d)) {}
+  KernelFunction kernel;
+  std::unique_ptr<FunctionSchema> inferred_function_schema;
+  std::string debug;
+};
+
 
 // Internal data structure that records information about a specific operator.
 // It's not part of the public API; typically, users will interact with
@@ -55,6 +67,10 @@ public:
     return dispatch_key_extractor_;
   }
 
+  const OperatorName& operatorName() const {
+    return name_;
+  }
+
   void assertSignatureIsCorrect(const CppSignature& call_signature, bool has_symint) const;
 
   template<class FuncType>
@@ -64,6 +80,22 @@ public:
 
   void registerSchema(FunctionSchema&&, std::string&& debug);
   void deregisterSchema();
+
+  using AnnotatedKernelContainer = std::list<AnnotatedKernel>;
+  using AnnotatedKernelContainerIterator = std::list<AnnotatedKernel>::iterator;
+
+  AnnotatedKernelContainer registerKernel(
+    const Dispatcher& dispatcher,
+    std::optional<DispatchKey> dispatchKey,
+    KernelFunction kernelFunction,
+    std::optional<CppSignature> cpp_signature,
+    std::unique_ptr<FunctionSchema> inferred_func_schema,
+    std::string debug);
+
+  void deregisterKernel_(
+    const Dispatcher& dispatcher,
+    std::optional<DispatchKey> dispatch_key,
+    AnnotatedKernelContainerIterator kernel);
 
 private:
   OperatorName name_;
