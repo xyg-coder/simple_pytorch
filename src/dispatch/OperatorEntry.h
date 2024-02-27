@@ -71,10 +71,13 @@ public:
     return name_;
   }
 
-  void assertSignatureIsCorrect(const CppSignature& call_signature, bool has_symint) const;
+  void assertSignatureIsCorrect(const CppSignature& call_signature) const;
 
   template<class FuncType>
-  inline void assertSignatureIsCorrect();
+  inline void assertSignatureIsCorrect() {
+    assertSignatureIsCorrect(
+      CppSignature::make<FuncType>());
+  }
 
   const KernelFunction& lookup(DispatchKeySet ks) const;
 
@@ -98,9 +101,20 @@ public:
     AnnotatedKernelContainerIterator kernel);
 
 private:
+
+  struct CppSignatureWithDebug {
+    CppSignature signature;
+    std::string debug;
+    std::optional<DispatchKey> dispatch_key;
+  };
+  std::optional<CppSignatureWithDebug> cpp_signature_;
+
+  void reportSignatureError(const CppSignature& call_signature, const CppSignatureWithDebug& saved_signature) const;
+
   OperatorName name_;
   std::optional<AnnotatedSchema> schema_;
   std::array<KernelFunction, num_runtime_entries> dispatch_table_;
   DispatchKeyExtractor dispatch_key_extractor_;
+
 };
 }
