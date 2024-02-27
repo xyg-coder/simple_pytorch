@@ -1,10 +1,21 @@
 #pragma once
 
+#include "dispatch/CppSignature.h"
+#include "dispatch/DispatchKey.h"
 #include "dispatch/DispatchKeySet.h"
+#include "dispatch/FunctionSchema.h"
+#include "dispatch/KernelFunction.h"
 #include "dispatch/OperatorEntry.h"
 #include "dispatch/OperatorName.h"
+#include "dispatch/RegistrationHandleRAII.h"
+#include "utils/LeftRight.h"
 #include "utils/TypeList.h"
+#include <atomic>
+#include <list>
+#include <memory>
+#include <mutex>
 #include <optional>
+#include <string>
 #include <unordered_map>
 namespace c10 {
 
@@ -37,6 +48,7 @@ struct OperatorDef final {
  */
 class OperatorHandle {
 public:
+  friend class Dispatcher;
   OperatorHandle(OperatorHandle&&) noexcept = default;
   OperatorHandle& operator=(OperatorHandle&&) noexcept = default;
   OperatorHandle(const OperatorHandle&) = default;
@@ -50,6 +62,20 @@ public:
 
   bool hasSchema() const;
 
+  const FunctionSchema& schema() const {
+    return operator_def_->op_.schema();
+  }
+
+protected:
+  explicit OperatorHandle(std::list<OperatorDef>::iterator operator_iterator)
+    :operator_def_(&*operator_iterator),
+      operators_iterator_(operator_iterator) {}
+
+  // Storing a direct pointer to the OperatorDef even though we
+  // already have the iterator saves an instruction in the critical
+  // dispatch path. The iterator is effectively a
+  OperatorDef* operator_def_;
+  std::list<OperatorDef>::iterator operators_iterator_;
 };
 
 /**
@@ -78,19 +104,28 @@ public:
   Return call(Args... args) const {}
 
   Return redispatch(DispatchKeySet currentDispatchKeySet, Args... args) const {}
-
+private:
+  explicit TypedOperatorHandle(std::list<OperatorDef>::iterator operator_iterator)
+    : OperatorHandle(operator_iterator) {}
 };
 
 class Dispatcher final {
 public:
+
+  struct Guard {
+    Guard(): alive(true), mutex() {}
+    std::atomic<bool> alive;
+    std::mutex mutex;
+  };
+
+  friend class OperatorHandle;
   ~Dispatcher();
 
   template<class Return, class... Args>
   Return call(const TypedOperatorHandle<Return(Args...)>& op, Args... args) const;
 
   template<class Return, class... Args>
-  Return redispatch(const TypedOperatorHandle<Return(Args...)>& op,
-    DispatchKeySet currentDispatchKeySet, Args... args) const;
+  Return redispatch(const TypedOperatorHandle<Return(Args...)>& op, DispatchKeySet dispatch_keyset, Args... args) const;
 
   std::optional<OperatorHandle> findSchema(const OperatorName& operator_name);
 
@@ -98,7 +133,29 @@ public:
 
   std::optional<OperatorHandle> findOp(const OperatorName& operator_name);
 
+  static Dispatcher& singleton();
+
+  RegistrationHandleRAII registerDef(FunctionSchema schema, std::string debug);
+
+  RegistrationHandleRAII registerImpl(
+    OperatorName op_name, std::optional<DispatchKey> dispatch_key, KernelFunction kernel_function,
+    std::optional<CppSignature> cpp_signature, std::unique_ptr<FunctionSchema> inferred_function_schema,
+    std::string debug);
+
 private:
-  std::unordered_map<typename Key, typename Tp>
+  std::list<OperatorDef> operators_;
+  LeftRight<std::unordered_map<OperatorName, OperatorHandle, c10::OperatorNameHash>> operator_lookup_table_;
+  void deregisterDef_(const OperatorHandle& op, const OperatorName& op_name);
+  void deregisterImpl_(
+    const OperatorHandle& op,
+    const OperatorName& op_name,
+    std::optional<DispatchKey> dispatch_key);
+  
+  OperatorHandle findOrRegisterName_(const OperatorName& op_name);
+
+  void cleanup(const OperatorHandle& op, const OperatorName& op_name);
+
+  // have one shared_ptr here because we might need this guard even the dispatcher is freed
+  std::shared_ptr<Guard> guard_;
 };
 }

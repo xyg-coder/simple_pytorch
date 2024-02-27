@@ -2,6 +2,7 @@
 
 #include "dispatch/CppSignature.h"
 #include "dispatch/DispatchKey.h"
+#include "dispatch/DispatchKeySet.h"
 #include "dispatch/DispatcherKeyExtractor.h"
 #include "dispatch/FunctionSchema.h"
 #include "dispatch/KernelFunction.h"
@@ -57,9 +58,12 @@ public:
   void assertSignatureIsCorrect(const CppSignature& call_signature, bool has_symint) const;
 
   template<class FuncType>
-  inline void assertSignatureIsCorrect() {
+  inline void assertSignatureIsCorrect();
 
-  }
+  const KernelFunction& lookup(DispatchKeySet ks) const;
+
+  void registerSchema(FunctionSchema&&, std::string&& debug);
+  void deregisterSchema();
 
 private:
   OperatorName name_;

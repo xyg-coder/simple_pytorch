@@ -1,7 +1,12 @@
 #include "dispatch/Dispatcher.h"
+#include "dispatch/DispatchKeySet.h"
+#include "dispatch/KernelFunction.h"
 #include "dispatch/OperatorName.h"
+#include "dispatch/RegistrationHandleRAII.h"
 #include "utils/Exception.h"
+#include <mutex>
 #include <optional>
+#include <unordered_map>
 
 namespace c10 {
 OperatorHandle Dispatcher::findSchemaOrThrow(
@@ -34,4 +39,81 @@ std::optional<OperatorHandle> Dispatcher::findSchema(const OperatorName& op_name
   }
 }
 
+std::optional<OperatorHandle> Dispatcher::findOp(const OperatorName& operator_name) {
+  return operator_lookup_table_.read([&]
+    (const std::unordered_map<OperatorName, OperatorHandle, OperatorNameHash>& operator_lookup_table) ->
+      std::optional<OperatorHandle>{
+      auto found = operator_lookup_table.find(operator_name);
+      if (found == operator_lookup_table.end()) {
+        return std::nullopt;
+      }
+      return found->second;
+    }); 
 }
+
+Dispatcher& singleton() {
+  static Dispatcher _singleton;
+  return _singleton;
+}
+
+template <class Return, class... Args>
+Return Dispatcher::call(const TypedOperatorHandle<Return(Args...)>& op, Args... args) const {
+  DispatchKeySet dispatch_keyset = op.operator_def_->op.dispatchKeyExtractor()
+    .template getDispatchKeySetUnboxed<Args...>(args...);
+  const KernelFunction& kernel = op.operator_def_->op.lookup(dispatch_keyset);
+  return kernel.template call<Return, Args...>(
+    op, dispatch_keyset, std::forward<Args>(args)...);
+}
+
+template <class Return, class... Args>
+Return Dispatcher::redispatch(const TypedOperatorHandle<Return(Args...)>& op,
+  DispatchKeySet dispatch_keyset, Args... args) const {
+  const KernelFunction& kernel = op.operator_def_->op.lookup(dispatch_keyset);
+    return kernel.template call<Return, Args...>(
+    op, dispatch_keyset, std::forward<Args>(args)...);
+}
+
+RegistrationHandleRAII Dispatcher::registerDef(FunctionSchema schema, std::string debug) {
+  std::lock_guard<std::mutex> lock(guard_->mutex);
+  OperatorName op_name = schema.operatorName();
+  OperatorHandle op = findOrRegisterName_(op_name);
+  TORCH_CHECK(op.operator_def_->def_count == 0,
+    "Tried to register an operator (", schema, ") with the same name and overload name multiple times.");
+  op.operator_def_->op_.registerSchema(std::move(schema), std::move(debug));
+
+  ++op.operator_def_->def_count;
+  ++op.operator_def_->def_and_impl_count;
+
+  return RegistrationHandleRAII([guard=guard_, this, op, op_name]() -> void {
+    std::lock_guard<std::mutex> lock(guard->mutex);
+    if (!guard->alive.load()) {
+      return;
+    }
+    deregisterDef_(op, op_name);
+  });  
+}
+
+void Dispatcher::deregisterDef_(const OperatorHandle& op, const OperatorName& op_name) {
+  TORCH_CHECK(op.schema().operatorName() == op_name);
+  TORCH_CHECK(op.operator_def_->def_and_impl_count > 0);
+  TORCH_CHECK(op.operator_def_->def_count > 0);
+  --op.operator_def_->def_and_impl_count;
+  --op.operator_def_->def_count;
+
+  if (op.operator_def_->def_count == 0) {
+    op.operator_def_->op_.deregisterSchema();
+  }
+  cleanup(op, op_name);
+}
+
+void Dispatcher::cleanup(const OperatorHandle& op, const OperatorName& op_name) {
+  if (op.operator_def_->def_and_impl_count == 0) {
+    operators_.erase(op.operators_iterator_);
+    operator_lookup_table_.write(
+      [&](std::unordered_map<OperatorName, OperatorHandle, c10::OperatorNameHash>& operator_lookup_table){
+        operator_lookup_table.erase(op_name);
+      });
+  }
+}
+
+} // namespace c10
