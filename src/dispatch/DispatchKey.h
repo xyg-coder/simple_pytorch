@@ -3,6 +3,7 @@
 #include <cstdint>
 namespace c10 {
 enum class DispatchKey : uint16_t {
+  Autograd,
   CUDA,
   EndOfFunctionalityKeys,
 };

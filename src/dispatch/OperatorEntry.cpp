@@ -1,6 +1,7 @@
 #include "dispatch/OperatorEntry.h"
 #include "dispatch/CppSignature.h"
 #include "macros/Macros.h"
+#include "utils/Exception.h"
 
 namespace c10 {
 void OperatorEntry::assertSignatureIsCorrect(const CppSignature& call_signature) const {
@@ -22,4 +23,10 @@ void OperatorEntry::reportSignatureError(const CppSignature& call_signature, con
   );
 };
 
+void OperatorEntry::reportError(DispatchKey dispatchKey) const {
+  TORCH_CHECK_WITH(NotImplementedError, false, "Could not run '", name_, "' with arguments.",
+          " This could be because "
+          "the operator doesn't exist for this backend, or was omitted during ",
+          "the selective/custom build process (if using custom build).");
+}
 }

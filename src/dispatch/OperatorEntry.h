@@ -7,6 +7,7 @@
 #include "dispatch/FunctionSchema.h"
 #include "dispatch/KernelFunction.h"
 #include "dispatch/OperatorName.h"
+#include "macros/Macros.h"
 #include "utils/Exception.h"
 #include <array>
 #include <memory>
@@ -79,7 +80,19 @@ public:
       CppSignature::make<FuncType>());
   }
 
-  const KernelFunction& lookup(DispatchKeySet ks) const;
+  void reportError(DispatchKey dispatchKey) const;
+
+  const KernelFunction& lookup(DispatchKeySet ks) const {
+    const auto idx = ks.getDispatchTableIndexForDispatchKeySet();
+    if (C10_UNLIKELY(idx == -1)) {
+      reportError(ks.highestPriorityTypeId());
+    }
+    const auto& kernel = dispatch_table_[idx];
+    if (C10_UNLIKELY(!kernel.isValidUnboxed())) {
+      reportError(ks.highestPriorityTypeId());
+    }
+    return kernel;
+  }
 
   void registerSchema(FunctionSchema&&, std::string&& debug);
   void deregisterSchema();

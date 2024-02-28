@@ -14,10 +14,11 @@ const OperatorName& operatorName() const {
 }
 private:
   OperatorName name_;
-
 };
 
-inline std::ostream& operator<<(std::ostream& out, const FunctionSchema& schema);
+inline std::ostream& operator<<(std::ostream& out, const FunctionSchema& schema) {
+
+}
 
 inline std::string toString(const FunctionSchema& schema) {
   std::ostringstream str;
