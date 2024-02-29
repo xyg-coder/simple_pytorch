@@ -22,12 +22,12 @@ struct AnnotatedSchema final {
 };
 
 struct AnnotatedKernel final {
+  AnnotatedKernel() = default;
   AnnotatedKernel(KernelFunction&& k,
     std::unique_ptr<FunctionSchema>&& s, std::string&& d)
-    :kernel(std::move(k)), inferred_function_schema(std::move(s)),
+    :kernel(std::move(k)),
     debug(std::move(d)) {}
   KernelFunction kernel;
-  std::unique_ptr<FunctionSchema> inferred_function_schema;
   std::string debug;
 };
 
@@ -88,21 +88,18 @@ public:
       reportError(ks.highestPriorityTypeId());
     }
     const auto& kernel = dispatch_table_[idx];
-    if (C10_UNLIKELY(!kernel.isValidUnboxed())) {
+    if (C10_UNLIKELY(!kernel.kernel.isValidUnboxed())) {
       reportError(ks.highestPriorityTypeId());
     }
-    return kernel;
+    return kernel.kernel;
   }
 
   void registerSchema(FunctionSchema&&, std::string&& debug);
   void deregisterSchema();
 
-  using AnnotatedKernelContainer = std::list<AnnotatedKernel>;
-  using AnnotatedKernelContainerIterator = std::list<AnnotatedKernel>::iterator;
-
-  AnnotatedKernelContainer registerKernel(
+  void registerKernel(
     const Dispatcher& dispatcher,
-    std::optional<DispatchKey> dispatchKey,
+    DispatchKey dispatchKey,
     KernelFunction kernelFunction,
     std::optional<CppSignature> cpp_signature,
     std::unique_ptr<FunctionSchema> inferred_func_schema,
@@ -110,8 +107,7 @@ public:
 
   void deregisterKernel_(
     const Dispatcher& dispatcher,
-    std::optional<DispatchKey> dispatch_key,
-    AnnotatedKernelContainerIterator kernel);
+    DispatchKey dispatch_key);
 
 private:
 
@@ -126,8 +122,7 @@ private:
 
   OperatorName name_;
   std::optional<AnnotatedSchema> schema_;
-  std::array<KernelFunction, num_runtime_entries> dispatch_table_;
+  std::array<AnnotatedKernel, num_runtime_entries> dispatch_table_;
   DispatchKeyExtractor dispatch_key_extractor_;
-
 };
 }

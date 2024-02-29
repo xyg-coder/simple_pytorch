@@ -20,6 +20,7 @@
 namespace c10 {
 
 template<class FuncType> class TypedOperatorHandle;
+class Dispatcher;
 
 struct OperatorDef final {
   explicit OperatorDef(OperatorName&& operator_name)
@@ -58,9 +59,13 @@ public:
 
   template<class Func>
   TypedOperatorHandle<Func> typed() const {
+    operator_def_->op_.assertSignatureIsCorrect<Func>();
+    return TypedOperatorHandle<Func>(operators_iterator_);
   }
 
-  bool hasSchema() const;
+  bool hasSchema() const {
+    return operator_def_->op_.hasSchema();
+  }
 
   const FunctionSchema& schema() const {
     return operator_def_->op_.schema();
@@ -89,28 +94,6 @@ template<class FuncType>
 class TypedOperatorHandle final {
   static_assert(guts::false_t<FuncType>(),
     "FuncType in OperatorHandle::typed<FuncType> was not a valid function type");
-};
-
-/**
- * This is a handle to an operator schema registered with the dispatcher.
- * It holds the same information as an OperatorHandle, but it is templated
- * on the operator arguments and allows calling the operator in an
- * unboxed way.
- */
-template<class Return, class... Args>
-class TypedOperatorHandle<Return (Args...)> final : public OperatorHandle {
-public:
-  TypedOperatorHandle(TypedOperatorHandle&&) noexcept = default;
-  TypedOperatorHandle& operator=(TypedOperatorHandle&&) noexcept = default;
-  TypedOperatorHandle(const TypedOperatorHandle&) = default;
-  TypedOperatorHandle& operator=(const TypedOperatorHandle&) = default;
-
-  Return call(Args... args) const {}
-
-  Return redispatch(DispatchKeySet currentDispatchKeySet, Args... args) const {}
-private:
-  explicit TypedOperatorHandle(std::list<OperatorDef>::iterator operator_iterator)
-    : OperatorHandle(operator_iterator) {}
 };
 
 class Dispatcher final {
@@ -142,7 +125,7 @@ public:
   RegistrationHandleRAII registerDef(FunctionSchema schema, std::string debug);
 
   RegistrationHandleRAII registerImpl(
-    OperatorName op_name, std::optional<DispatchKey> dispatch_key, KernelFunction kernel_function,
+    OperatorName op_name, DispatchKey dispatch_key, KernelFunction kernel_function,
     std::optional<CppSignature> cpp_signature, std::unique_ptr<FunctionSchema> inferred_function_schema,
     std::string debug);
 
@@ -153,8 +136,7 @@ private:
   void deregisterImpl_(
     const OperatorHandle& op,
     const OperatorName& op_name,
-    std::optional<DispatchKey> dispatch_key,
-    OperatorEntry::AnnotatedKernelContainerIterator iterator);
+    DispatchKey dispatch_key);
   
   OperatorHandle findOrRegisterName_(const OperatorName& op_name);
 
@@ -162,5 +144,32 @@ private:
 
   // have one shared_ptr here because we might need this guard even the dispatcher is freed
   std::shared_ptr<Guard> guard_;
+};
+
+/**
+ * This is a handle to an operator schema registered with the dispatcher.
+ * It holds the same information as an OperatorHandle, but it is templated
+ * on the operator arguments and allows calling the operator in an
+ * unboxed way.
+ */
+template<class Return, class... Args>
+class TypedOperatorHandle<Return (Args...)> final : public OperatorHandle {
+public:
+  TypedOperatorHandle(TypedOperatorHandle&&) noexcept = default;
+  TypedOperatorHandle& operator=(TypedOperatorHandle&&) noexcept = default;
+  TypedOperatorHandle(const TypedOperatorHandle&) = default;
+  TypedOperatorHandle& operator=(const TypedOperatorHandle&) = default;
+
+  Return call(Args... args) const {
+    return c10::Dispatcher::singleton().call(*this, args...);
+  }
+
+  Return redispatch(DispatchKeySet currentDispatchKeySet, Args... args) const {
+    return c10::Dispatcher::singleton().redispatch(
+      *this, currentDispatchKeySet, args...);
+  }
+private:
+  explicit TypedOperatorHandle(std::list<OperatorDef>::iterator operator_iterator)
+    : OperatorHandle(operator_iterator) {}
 };
 }

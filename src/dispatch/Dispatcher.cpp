@@ -117,7 +117,7 @@ void Dispatcher::cleanup(const OperatorHandle& op, const OperatorName& op_name) 
 }
 
 RegistrationHandleRAII Dispatcher::registerImpl(
-  OperatorName op_name, std::optional<DispatchKey> dispatch_key, KernelFunction kernel_function,
+  OperatorName op_name, DispatchKey dispatch_key, KernelFunction kernel_function,
   std::optional<CppSignature> cpp_signature, std::unique_ptr<FunctionSchema> inferred_function_schema,
   std::string debug) {
   std::lock_guard<std::mutex> lock(guard_->mutex);
@@ -141,10 +141,9 @@ RegistrationHandleRAII Dispatcher::registerImpl(
 }
 
 void Dispatcher::deregisterImpl_(const OperatorHandle& op,
-  const OperatorName& op_name, std::optional<DispatchKey> dispatch_key,
-  OperatorEntry::AnnotatedKernelContainerIterator iterator) {
+  const OperatorName& op_name, DispatchKey dispatch_key) {
     
-  op.operator_def_->op_.deregisterKernel_(*this, dispatch_key, iterator);
+  op.operator_def_->op_.deregisterKernel_(*this, dispatch_key);
   TORCH_CHECK(op.operator_name() == op_name);
   TORCH_CHECK(op.operator_def_->def_and_impl_count > 0);
   --op.operator_def_->def_and_impl_count;
