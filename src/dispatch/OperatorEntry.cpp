@@ -7,6 +7,11 @@
 #include <optional>
 
 namespace c10 {
+// all other fields keep the same
+OperatorEntry::OperatorEntry(OperatorName&& operator_name)
+  :name_(std::move(operator_name)) { }
+
+
 void OperatorEntry::assertSignatureIsCorrect(const CppSignature& call_signature) const {
   if (C10_UNLIKELY(cpp_signature_.has_value() && cpp_signature_->signature != call_signature)) {
     reportSignatureError(call_signature, cpp_signature_.value());

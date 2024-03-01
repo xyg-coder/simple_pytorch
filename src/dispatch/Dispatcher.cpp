@@ -26,6 +26,11 @@ OperatorHandle Dispatcher::findSchemaOrThrow(
   return it.value();
 }
 
+Dispatcher::~Dispatcher() {
+  std::lock_guard<std::mutex> lock(guard_->mutex);
+  guard_->alive.store(false);
+}
+
 std::optional<OperatorHandle> Dispatcher::findSchema(const OperatorName& op_name) {
   auto it = findOp(op_name);
   if (it.has_value()) {
@@ -85,6 +90,7 @@ OperatorHandle Dispatcher::findOrRegisterName_(const OperatorName& op_name) {
     (std::unordered_map<OperatorName, OperatorHandle, OperatorNameHash>& operator_lookup_table) {
       operator_lookup_table.emplace(op_name, handle);
     });
+  return handle;
 }
 
 RegistrationHandleRAII Dispatcher::registerDef(FunctionSchema schema, std::string debug) {
@@ -136,7 +142,7 @@ RegistrationHandleRAII Dispatcher::registerImpl(
   std::string debug) {
   std::lock_guard<std::mutex> lock(guard_->mutex);
   auto op = findOrRegisterName_(op_name);
-  auto handle = op.operator_def_->op_.registerKernel(
+  op.operator_def_->op_.registerKernel(
     *this,
     dispatch_key,
     std::move(kernel_function),
@@ -145,12 +151,12 @@ RegistrationHandleRAII Dispatcher::registerImpl(
     std::move(debug));
   ++op.operator_def_->def_and_impl_count;
   return RegistrationHandleRAII([
-    guard=this->guard_, this, op, op_name, dispatch_key, handle]{
+    guard=this->guard_, this, op, op_name, dispatch_key]{
     std::lock_guard<std::mutex> lock(guard->mutex);
     if (guard->alive.load()) {
       return;
     }
-    deregisterImpl_(op, op_name, dispatch_key, handle);
+    deregisterImpl_(op, op_name, dispatch_key);
   });
 }
 

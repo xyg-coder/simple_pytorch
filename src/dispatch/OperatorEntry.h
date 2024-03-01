@@ -15,6 +15,8 @@
 #include <string>
 namespace c10 {
 
+class Dispatcher;
+
 struct AnnotatedSchema final {
   AnnotatedSchema(FunctionSchema&& s, std::string&& d): schema_(std::move(s)), debug_(std::move(d)) {};
   FunctionSchema schema_;

@@ -1,8 +1,10 @@
 #pragma once
 
 #include "dispatch/DispatchKeySet.h"
-#include "dispatch/Dispatcher.h"
 namespace c10 {
+
+class OperatorHandle;
+
 class KernelFunction final {
 public:
   inline KernelFunction(): unboxed_kernel_func_(nullptr) {}

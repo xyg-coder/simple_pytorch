@@ -55,7 +55,7 @@ public:
   OperatorHandle(const OperatorHandle&) = default;
   OperatorHandle& operator=(const OperatorHandle&) = default;
   // NOLINTNEXTLINE(performance-trivially-destructible)
-  ~OperatorHandle();
+  ~OperatorHandle() = default;
 
   template<class Func>
   TypedOperatorHandle<Func> typed() const {

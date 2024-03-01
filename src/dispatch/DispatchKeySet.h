@@ -158,7 +158,7 @@ public:
     return indexOfHighestBit();
   }
 
-  constexpr DispatchKeySet add(DispatchKey t) const {
+  DispatchKeySet add(DispatchKey t) const {
     return *this | DispatchKeySet(t);
   }
 
