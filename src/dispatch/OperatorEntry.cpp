@@ -80,6 +80,8 @@ void OperatorEntry::registerKernel(
       std::move(kernelFunction),
       std::move(inferred_func_schema),
       std::move(debug)};
+
+  dispatch_key_extractor_.addDispatchKey(dispatchKey);
 }
 
 void OperatorEntry::deregisterKernel_(

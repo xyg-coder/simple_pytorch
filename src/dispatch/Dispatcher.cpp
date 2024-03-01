@@ -51,7 +51,7 @@ std::optional<OperatorHandle> Dispatcher::findOp(const OperatorName& operator_na
     }); 
 }
 
-Dispatcher& singleton() {
+Dispatcher& Dispatcher::singleton() {
   static Dispatcher _singleton;
   return _singleton;
 }
@@ -71,6 +71,20 @@ Return Dispatcher::redispatch(const TypedOperatorHandle<Return(Args...)>& op,
   const KernelFunction& kernel = op.operator_def_->op.lookup(dispatch_keyset);
     return kernel.template call<Return, Args...>(
     op, dispatch_keyset, std::forward<Args>(args)...);
+}
+
+OperatorHandle Dispatcher::findOrRegisterName_(const OperatorName& op_name) {
+  const auto found = findOp(op_name);
+  if (found != std::nullopt) {
+    return *found;
+  }
+
+  operators_.emplace_back(std::move(OperatorName(op_name)));
+  OperatorHandle handle(--operators_.end());
+  operator_lookup_table_.write([&]
+    (std::unordered_map<OperatorName, OperatorHandle, OperatorNameHash>& operator_lookup_table) {
+      operator_lookup_table.emplace(op_name, handle);
+    });
 }
 
 RegistrationHandleRAII Dispatcher::registerDef(FunctionSchema schema, std::string debug) {

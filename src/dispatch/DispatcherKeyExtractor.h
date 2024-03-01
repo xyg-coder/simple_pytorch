@@ -21,6 +21,9 @@ struct DispatchKeyExtractor {
   }
   void registerSchema(const FunctionSchema& schema) {}
   void deregisterSchema() {}
+  void addDispatchKey(DispatchKey dispatchKey) {
+    non_fall_through_keys_ = non_fall_through_keys_.add(dispatchKey);
+  }
 private:
   DispatchKeySet non_fall_through_keys_;
 };

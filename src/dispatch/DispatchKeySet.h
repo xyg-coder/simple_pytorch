@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dispatch/DispatchKey.h"
+#include "utils/LlvmMathExtras.h"
 #include "utils/Metaprogramming.h"
 #include "utils/TypeList.h"
 #include <cstdint>
@@ -135,15 +136,31 @@ public:
     return DispatchKeySet(repr_ & other.repr_);
   }
 
+    constexpr DispatchKeySet operator|(DispatchKeySet other) const {
+    return DispatchKeySet(repr_ | other.repr_);
+  }
+
   // currently we ignore the complicated cases of the dispatchKeyset
   // so dispatchKey is totally the same as dispatchkeyset
   explicit DispatchKeySet(DispatchKey k): repr_(static_cast<uint16_t>(k)) { }
 
   // returns the DispatchKey of highest priority in the set.
-  DispatchKey highestPriorityTypeId() const;
-  // returns the index in the operator table of highest priority key in the the keyset
-  int getDispatchTableIndexForDispatchKeySet() const;
+  DispatchKey highestPriorityTypeId() const {
+    return static_cast<DispatchKey>(indexOfHighestBit());
+  }
 
+  uint8_t indexOfHighestBit() const {
+    return 64 - llvm::countLeadingZeros(repr_);
+  }
+
+  // returns the index in the operator table of highest priority key in the the keyset
+  int getDispatchTableIndexForDispatchKeySet() const {
+    return indexOfHighestBit();
+  }
+
+  constexpr DispatchKeySet add(DispatchKey t) const {
+    return *this | DispatchKeySet(t);
+  }
 
 private:
   uint64_t repr_ = 0;
