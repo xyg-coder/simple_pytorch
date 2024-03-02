@@ -98,6 +98,7 @@ class TypedOperatorHandle final {
 
 class Dispatcher final {
 public:
+  Dispatcher():guard_(std::make_shared<Guard>()) {};
 
   struct Guard {
     Guard(): alive(true), mutex() {}
