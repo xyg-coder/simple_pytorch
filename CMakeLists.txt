@@ -15,7 +15,7 @@ set(CMAKE_BUILD_TYPE Debug)
 # output compile_commands.json to be used by IDE
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  
 
-file(GLOB SOURCES src/*.cpp src/utils/*.cpp src/cuda/*.cpp)  
+file(GLOB SOURCES src/*.cpp src/utils/*.cpp src/cuda/*.cpp src/dispatch/*.cpp)  
 
 set(INCLUDES src)
 set (CMAKE_PREFIX_PATH "/usr/local/cuda" "${CMAKE_PREFIX_PATH}")  
@@ -30,17 +30,20 @@ add_executable(TestCudaContext ${SOURCES} example/test_cuda_context.cpp)
 add_executable(TestThreadPool ${SOURCES} example/test_thread_pool.cpp)
 add_executable(TestException ${SOURCES} example/test_exception.cpp)
 add_executable(TestAllocator ${SOURCES} example/test_allocator.cpp)
+add_executable(TestDispatcher ${SOURCES} example/test_dispatcher.cpp)
 target_link_libraries (TestTensorExecutable ${ALL_LIBS})
 target_link_libraries (TestThreadPool ${ALL_LIBS})
 target_link_libraries (TestCudaContext ${ALL_LIBS})
 target_link_libraries (TestException ${ALL_LIBS})
 target_link_libraries (TestAllocator ${ALL_LIBS})
+target_link_libraries (TestDispatcher ${ALL_LIBS})
 
 target_include_directories(TestTensorExecutable PRIVATE ${INCLUDES})
 target_include_directories(TestThreadPool PRIVATE ${INCLUDES})
 target_include_directories(TestCudaContext PRIVATE ${INCLUDES})
 target_include_directories(TestException PRIVATE ${INCLUDES})
 target_include_directories (TestAllocator PRIVATE ${INCLUDES})
+target_include_directories (TestDispatcher PRIVATE ${INCLUDES})
 
 # TEST
 include(FetchContent)
@@ -69,9 +72,15 @@ add_executable(
   metaprogramming_test
   test/metaprogramming_test.cpp
 )
+add_executable(
+  dispatcher_test
+  ${SOURCES}
+  test/dispatcher_test.cpp
+)
 target_include_directories(allocator_test PRIVATE ${INCLUDES})
 target_include_directories(cuda_allocator_test PRIVATE ${INCLUDES})
 target_include_directories(metaprogramming_test PRIVATE ${INCLUDES})
+target_include_directories(dispatcher_test PRIVATE ${INCLUDES})
 target_link_libraries(
   allocator_test
   ${TEST_LIBS}
@@ -84,9 +93,15 @@ target_link_libraries(
   metaprogramming_test
   ${TEST_LIBS}
 )
+target_link_libraries(
+  dispatcher_test
+  ${TEST_LIBS}
+)
 
 include(GoogleTest)
 gtest_discover_tests(allocator_test)
 gtest_discover_tests(cuda_allocator_test)
+gtest_discover_tests(metaprogramming_test)
+gtest_discover_tests(dispatcher_test)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
