@@ -127,7 +127,7 @@ public:
 
   RegistrationHandleRAII registerImpl(
     OperatorName op_name, DispatchKey dispatch_key, KernelFunction kernel_function,
-    std::optional<CppSignature> cpp_signature, std::unique_ptr<FunctionSchema> inferred_function_schema,
+    std::optional<CppSignature> cpp_signature,
     std::string debug);
 
 private:
@@ -156,6 +156,8 @@ private:
 template<class Return, class... Args>
 class TypedOperatorHandle<Return (Args...)> final : public OperatorHandle {
 public:
+  friend class Dispatcher;
+  friend class OperatorHandle;
   TypedOperatorHandle(TypedOperatorHandle&&) noexcept = default;
   TypedOperatorHandle& operator=(TypedOperatorHandle&&) noexcept = default;
   TypedOperatorHandle(const TypedOperatorHandle&) = default;
@@ -173,4 +175,22 @@ private:
   explicit TypedOperatorHandle(std::list<OperatorDef>::iterator operator_iterator)
     : OperatorHandle(operator_iterator) {}
 };
+
+template <class Return, class... Args>
+Return Dispatcher::call(const TypedOperatorHandle<Return(Args...)>& op, Args... args) const {
+  DispatchKeySet dispatch_keyset = op.operator_def_->op_.dispatchKeyExtractor()
+    .template getDispatchKeySetUnboxed<Args...>(args...);
+  const KernelFunction& kernel = op.operator_def_->op_.lookup(dispatch_keyset);
+  return kernel.template call<Return, Args...>(
+    op, dispatch_keyset, std::forward<Args>(args)...);
 }
+
+template <class Return, class... Args>
+Return Dispatcher::redispatch(const TypedOperatorHandle<Return(Args...)>& op,
+  DispatchKeySet dispatch_keyset, Args... args) const {
+  const KernelFunction& kernel = op.operator_def_->op_.lookup(dispatch_keyset);
+    return kernel.template call<Return, Args...>(
+    op, dispatch_keyset, std::forward<Args>(args)...);
+}
+
+} //namespace c10

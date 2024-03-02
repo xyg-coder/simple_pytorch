@@ -12,6 +12,7 @@ struct Argument {};
 struct FunctionSchema {
 enum FunctionSchmaId {
   TEST,
+  ALLOCATOR,
 };
 
 FunctionSchema() = delete;

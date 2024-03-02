@@ -25,8 +25,7 @@ struct AnnotatedSchema final {
 
 struct AnnotatedKernel final {
   AnnotatedKernel() = default;
-  AnnotatedKernel(KernelFunction&& k,
-    std::unique_ptr<FunctionSchema>&& s, std::string&& d)
+  AnnotatedKernel(KernelFunction&& k, std::string&& d)
     :kernel(std::move(k)),
     debug(std::move(d)) {}
   KernelFunction kernel;
@@ -104,7 +103,6 @@ public:
     DispatchKey dispatchKey,
     KernelFunction kernelFunction,
     std::optional<CppSignature> cpp_signature,
-    std::unique_ptr<FunctionSchema> inferred_func_schema,
     std::string debug);
 
   void deregisterKernel_(

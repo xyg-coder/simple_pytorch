@@ -1,5 +1,4 @@
 #include "dispatch/Dispatcher.h"
-#include "dispatch/DispatchKeySet.h"
 #include "dispatch/KernelFunction.h"
 #include "dispatch/OperatorName.h"
 #include "dispatch/RegistrationHandleRAII.h"
@@ -59,23 +58,6 @@ std::optional<OperatorHandle> Dispatcher::findOp(const OperatorName& operator_na
 Dispatcher& Dispatcher::singleton() {
   static Dispatcher _singleton;
   return _singleton;
-}
-
-template <class Return, class... Args>
-Return Dispatcher::call(const TypedOperatorHandle<Return(Args...)>& op, Args... args) const {
-  DispatchKeySet dispatch_keyset = op.operator_def_->op.dispatchKeyExtractor()
-    .template getDispatchKeySetUnboxed<Args...>(args...);
-  const KernelFunction& kernel = op.operator_def_->op.lookup(dispatch_keyset);
-  return kernel.template call<Return, Args...>(
-    op, dispatch_keyset, std::forward<Args>(args)...);
-}
-
-template <class Return, class... Args>
-Return Dispatcher::redispatch(const TypedOperatorHandle<Return(Args...)>& op,
-  DispatchKeySet dispatch_keyset, Args... args) const {
-  const KernelFunction& kernel = op.operator_def_->op.lookup(dispatch_keyset);
-    return kernel.template call<Return, Args...>(
-    op, dispatch_keyset, std::forward<Args>(args)...);
 }
 
 OperatorHandle Dispatcher::findOrRegisterName_(const OperatorName& op_name) {
@@ -138,7 +120,7 @@ void Dispatcher::cleanup(const OperatorHandle& op, const OperatorName& op_name) 
 
 RegistrationHandleRAII Dispatcher::registerImpl(
   OperatorName op_name, DispatchKey dispatch_key, KernelFunction kernel_function,
-  std::optional<CppSignature> cpp_signature, std::unique_ptr<FunctionSchema> inferred_function_schema,
+  std::optional<CppSignature> cpp_signature,
   std::string debug) {
   std::lock_guard<std::mutex> lock(guard_->mutex);
   auto op = findOrRegisterName_(op_name);
@@ -147,13 +129,12 @@ RegistrationHandleRAII Dispatcher::registerImpl(
     dispatch_key,
     std::move(kernel_function),
     std::move(cpp_signature),
-    std::move(inferred_function_schema),
     std::move(debug));
   ++op.operator_def_->def_and_impl_count;
   return RegistrationHandleRAII([
     guard=this->guard_, this, op, op_name, dispatch_key]{
     std::lock_guard<std::mutex> lock(guard->mutex);
-    if (guard->alive.load()) {
+    if (!guard->alive.load()) {
       return;
     }
     deregisterImpl_(op, op_name, dispatch_key);

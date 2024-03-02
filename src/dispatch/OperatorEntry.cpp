@@ -5,6 +5,7 @@
 #include "macros/Macros.h"
 #include "utils/Exception.h"
 #include <optional>
+#include "utils/Logging.h"
 
 namespace c10 {
 // all other fields keep the same
@@ -56,7 +57,6 @@ void OperatorEntry::registerKernel(
   KernelFunction kernelFunction,
   std::optional<CppSignature> cpp_signature,
   // TODO: do we really need inferred_func_schema?
-  std::unique_ptr<FunctionSchema> inferred_func_schema,
   std::string debug) {
   
   if (cpp_signature.has_value()) {
@@ -83,7 +83,6 @@ void OperatorEntry::registerKernel(
   dispatch_table_[dispatch_table_index] = 
     AnnotatedKernel {
       std::move(kernelFunction),
-      std::move(inferred_func_schema),
       std::move(debug)};
 
   dispatch_key_extractor_.addDispatchKey(dispatchKey);
@@ -93,6 +92,7 @@ void OperatorEntry::deregisterKernel_(
   const Dispatcher& dispatcher,
   DispatchKey dispatch_key) {
   
+  LOG_INFO("deregister");
   auto dispatch_table_index = getDispatchTableIndexForDispatchKey(dispatch_key);
   AnnotatedKernel kernel = dispatch_table_[dispatch_table_index];
   TORCH_CHECK(kernel.kernel.isValidUnboxed(),

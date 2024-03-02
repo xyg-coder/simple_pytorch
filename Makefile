@@ -14,3 +14,6 @@ target:
 
 logrun:
 	GLOG_logtostderr=1 ./build/${TARGET}
+
+gtest:
+	cd build && ctest
