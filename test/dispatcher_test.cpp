@@ -110,7 +110,12 @@ TEST(DispatcherTest, callind_correct_function) {
   EXPECT_EQ(a, 32);
 
   keyset = c10::DispatchKeySet(c10::DispatchKey::CPU);
-    a = handle.redispatch(keyset, 10, 20);
+  a = handle.redispatch(keyset, 10, 20);
   // call cpu
   EXPECT_EQ(a, 30);
+
+  keyset = c10::DispatchKeySet(c10::DispatchKeySet::FULL);
+  a = handle.redispatch(keyset, 10, 20);
+  // call cpu
+  EXPECT_EQ(a, 32);
 }

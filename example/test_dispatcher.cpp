@@ -94,8 +94,12 @@ int main(int argc, char* argv[]) {
     keyset = keyset.add(c10::DispatchKey::Autograd);
   a = handle.redispatch(keyset, 10, 20);
   std::cout << a << std::endl;
+
+  keyset = c10::DispatchKeySet(c10::DispatchKeySet::FULL);
+  a = handle.redispatch(keyset, 10, 20);
+  std::cout << a << std::endl;
   
   c10::TypedOperatorHandle allocator_handle = c10::Dispatcher::singleton().findOp(c10::OperatorName("TEST_ALLOCATOR", ""))->
-    typed<c10::DataPtr(size_t)>();
+  typed<c10::DataPtr(size_t)>();
   c10::DataPtr ptr = allocator_handle.call(64 * 64 * sizeof(int));
 }
