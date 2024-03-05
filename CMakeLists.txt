@@ -15,7 +15,7 @@ set(CMAKE_BUILD_TYPE Debug)
 # output compile_commands.json to be used by IDE
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  
 
-file(GLOB SOURCES src/*.cpp src/utils/*.cpp src/cuda/*.cpp src/dispatch/*.cpp)  
+file(GLOB SOURCES src/*.cpp src/utils/*.cpp src/cuda/*.cpp src/dispatch/*.cpp src/cuda_ops/*.cpp)  
 
 set(INCLUDES src)
 set (CMAKE_PREFIX_PATH "/usr/local/cuda" "${CMAKE_PREFIX_PATH}")  
