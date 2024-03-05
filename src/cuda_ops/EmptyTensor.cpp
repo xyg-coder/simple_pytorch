@@ -75,6 +75,10 @@ Tensor empty_cuda(
   Storage storage(
     std::make_shared<StorageImpl>(size_bytes, allocator));
   
-  return Tensor(std::make_shared<TensorImpl>(std::move(storage)));
+  auto tensor = Tensor(std::make_shared<TensorImpl>(std::move(storage)));
+  if (size_array.size() != 1 || size_array[0] != 0) {
+    tensor.unsafeGetTensorImpl()->set_sizes_contiguous(size_array);
+  }
+  return tensor;
 }
 }

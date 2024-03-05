@@ -25,23 +25,23 @@ using const_iterator = const T*;
 using size_type = size_t;
 using value_type = T;
 
-constexpr ArrayRef(const T& oneElement): data_(&oneElement), length_(1) {}
-constexpr ArrayRef(const T* data, size_type length): data_(data), length_(length) {}
-constexpr ArrayRef(const T*begin, const T*end): data_(begin), length_(end - begin) {}
+  constexpr ArrayRef(const T& oneElement): data_(&oneElement), length_(1) {}
+  constexpr ArrayRef(const T* data, size_type length): data_(data), length_(length) {}
+  constexpr ArrayRef(const T*begin, const T*end): data_(begin), length_(end - begin) {}
 
-template <typename A>
-ArrayRef(const std::vector<T, A>& vec): data_(vec.data()), length_(vec.size()) {}
+  template <typename A>
+  ArrayRef(const std::vector<T, A>& vec): data_(vec.data()), length_(vec.size()) {}
 
-template <size_t N>
-constexpr ArrayRef(std::array<T, N>& arr): data_(arr.data()), length_(N) {}
+  template <size_t N>
+  constexpr ArrayRef(std::array<T, N>& arr): data_(arr.data()), length_(N) {}
 
-constexpr iterator begin() const {
-  return data_;
-}
+  constexpr iterator begin() const {
+    return data_;
+  }
 
-constexpr iterator end() const {
-  return data_ + length_;
-}
+  constexpr iterator end() const {
+    return data_ + length_;
+  }
 
   constexpr bool empty() const {
     return length_ == 0;
@@ -54,6 +54,10 @@ constexpr iterator end() const {
   /// size - Get the array size.
   constexpr size_t size() const {
     return length_;
+  }
+
+  constexpr const T& operator[](size_t index) const {
+    return data_[index];
   }
 
 private:
