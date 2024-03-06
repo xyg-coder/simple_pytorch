@@ -7,6 +7,7 @@
 #include "dispatch/RegistrationHandleRAII.h"
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -65,7 +66,7 @@ public:
     DEF,
     IMPL,
   };
-  Library(Kind kind, std::string ns, DispatchKey k, const char* file, uint32_t line);
+  Library(Kind kind, std::string ns, std::optional<DispatchKey> k, const char* file, uint32_t line);
 
   Library(const Library&) = delete;
   Library& operator=(const Library&) = delete;
@@ -89,7 +90,7 @@ public:
 private:
   Kind kind_;
   std::string ns_;  // namespace
-  DispatchKey dispatch_key_;
+  std::optional<DispatchKey> dispatch_key_opt_;
   const char* file_;
   uint32_t line_;
   std::vector<RegistrationHandleRAII> registars_;
@@ -104,7 +105,7 @@ public:
     Library::Kind kind,
     InitFn* fn,
     const char* ns,
-    c10::DispatchKey k,
+    std::optional<c10::DispatchKey> k,
     const char* file,
     uint32_t line): lib_(kind, ns, k, file, line) {
       fn(lib_);
@@ -121,7 +122,7 @@ public:
     std::nullopt,                                                     \
     __FILE__,                                                         \
     __LINE__);                                                        \
-  void TORCH_LIBRARY_init_##ns(c10::Library& m)
+  void TORCH_LIBRARY_INIT_##ns(c10::Library& m)
 
 
 /// Macro for defining a function that will be run at static
@@ -172,7 +173,7 @@ public:
     c10::Library::IMPL,                                                                                   \
     &C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid),                                         \
     #ns,                                                                                                  \
-    c10::DispatchKey::k,                                                              \
+    std::optional<c10::DispatchKey>(c10::DispatchKey::k),                                                 \
     __FILE__,                                                                                             \
     __LINE__);                                                                                            \
   void C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid)(c10::Library& m)

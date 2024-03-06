@@ -15,3 +15,6 @@
 #define C10_UID __LINE__
 #define C10_ANONYMOUS_VARIABLE(str) C10_CONCATENATE(str, __LINE__)
 #endif
+
+#define STATIC_CONSTEXPR_STR(field, val) \
+  static constexpr const char* field = val;

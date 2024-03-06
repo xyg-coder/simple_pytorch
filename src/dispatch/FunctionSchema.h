@@ -11,6 +11,8 @@ struct Argument {};
 // every implementation should have one schema defined here
 struct FunctionSchema {
 enum FunctionSchmaId {
+  EMPTY,
+  // below for testing
   TEST,
   ALLOCATOR,
 };

@@ -1,10 +1,9 @@
 #include "CpuAllocator.h"
-#include "ScalarType.h"
 #include "Storage.h"
 #include "StorageImpl.h"
 #include "Tensor.h"
 #include "TensorImpl.h"
-#include "cuda_ops/EmptyTensor.h"
+#include "ops/EmptyOps.h"
 #include "utils/ArrayRef.h"
 #include <array>
 #include <cstdint>
@@ -15,8 +14,7 @@
 simpletorch::Tensor get_cuda_tensor() {
 	std::array<int64_t, 2> size_array {5, 6};
 	c10::Int64ArrayRef size(size_array);
-	return simpletorch::ops::empty_cuda(
-		size, c10::ScalarType::Double, std::nullopt, std::nullopt);
+	return simpletorch::ops::empty::call(size, c10::ScalarType::Double, std::nullopt, std::nullopt);
 }
 
 int main(int argc, char* argv[]) {
