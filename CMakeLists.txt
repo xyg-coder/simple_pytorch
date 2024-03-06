@@ -78,10 +78,16 @@ add_executable(
   ${SOURCES}
   test/dispatcher_test.cpp
 )
+add_executable(
+  library_test
+  ${SOURCES}
+  test/library_test.cpp
+)
 target_include_directories(allocator_test PRIVATE ${INCLUDES})
 target_include_directories(cuda_allocator_test PRIVATE ${INCLUDES})
 target_include_directories(metaprogramming_test PRIVATE ${INCLUDES})
 target_include_directories(dispatcher_test PRIVATE ${INCLUDES})
+target_include_directories(library_test PRIVATE ${INCLUDES})
 target_link_libraries(
   allocator_test
   ${TEST_LIBS}
@@ -98,11 +104,16 @@ target_link_libraries(
   dispatcher_test
   ${TEST_LIBS}
 )
+target_link_libraries(
+  library_test
+  ${TEST_LIBS}
+)
 
 include(GoogleTest)
 gtest_discover_tests(allocator_test)
 gtest_discover_tests(cuda_allocator_test)
 gtest_discover_tests(metaprogramming_test)
 gtest_discover_tests(dispatcher_test)
+gtest_discover_tests(library_test)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)

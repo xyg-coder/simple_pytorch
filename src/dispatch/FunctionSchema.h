@@ -6,15 +6,19 @@
 #include <sstream>
 namespace c10 {
 
+#define FUNCTION_SCHEMA_LIST_ITER(_)   \
+  _(EMPTY, "EMPTY")                    \
+  _(TEST, "TEST")                      \
+  _(ALLOCATOR, "ALLOCATOR")            \
+
 struct Argument {};
 
 // every implementation should have one schema defined here
 struct FunctionSchema {
 enum FunctionSchmaId {
-  EMPTY,
-  // below for testing
-  TEST,
-  ALLOCATOR,
+  #define FETCH_ELEMENT(n, s) n,
+  FUNCTION_SCHEMA_LIST_ITER(FETCH_ELEMENT)
+  #undef FETCH_ELEMENT
 };
 
 FunctionSchema() = delete;
@@ -35,8 +39,11 @@ private:
 
 inline std::string toString(const FunctionSchema::FunctionSchmaId& schemaId) {
   switch (schemaId) {
-    case FunctionSchema::FunctionSchmaId::TEST:
-      return "TEST"; 
+    #define BUILD_SWITCH(n, s)  \
+    case(FunctionSchema::FunctionSchmaId::n): \
+    return s;
+    FUNCTION_SCHEMA_LIST_ITER(BUILD_SWITCH)
+    #undef BUILD_SWITCH
     default:
       TORCH_CHECK(false, "Invalid schemaId: ", schemaId);
   }

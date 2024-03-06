@@ -19,6 +19,4 @@ TORCH_LIBRARY_IMPL(aten, CUDA, m) {
     FunctionSchema(FunctionSchema::EMPTY, OperatorName("empty", "")),
     simpletorch::impl::empty_cuda);
 };
-
-
 }
