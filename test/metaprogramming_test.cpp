@@ -37,13 +37,30 @@ static_assert(
   !std::is_same<double (int, int),
     strip_class<decltype(&dummy_functor::operator())>::type>::value, "");
 
+class AddValue {  
+    int value;  
+public:  
+    AddValue(int v) : value(v) {}  
+  
+    int operator()(int x) const {  
+        return x + value;  
+    }  
+};
+
+class NonFunctor {  
+    int value;  
+};
+
+static_assert(is_functor<AddValue>::value, "");
+static_assert(!is_functor<NonFunctor>::value, "");
+
+static_assert(is_function_type<int (int, int)>::value, "");
+static_assert(!is_function_type<int>::value, "");
 //////////////////////
 // typelist.h
 //////////////////////
 static_assert(!false_t<int>::value, "");
 
-static_assert(typelist::is_function_type<int (int, int)>::value, "");
-static_assert(!typelist::is_function_type<int>::value, "");
 
 static_assert(std::is_same<typelist::head_with_default_t<void, typelist::typelist<int, double>>, int>::value, "");
 static_assert(std::is_same<typelist::head_with_default_t<void, typelist::typelist<>>, void>::value, "");

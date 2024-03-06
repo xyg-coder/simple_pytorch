@@ -10,7 +10,6 @@
 #include "macros/Macros.h"
 #include "utils/Exception.h"
 #include <array>
-#include <memory>
 #include <optional>
 #include <string>
 namespace c10 {

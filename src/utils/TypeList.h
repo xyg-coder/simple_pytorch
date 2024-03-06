@@ -13,13 +13,6 @@ template <class... T>
 struct false_t: std::false_type {};
 
 namespace typelist {
-
-
-template <class T>
-struct is_function_type: std::false_type {};
-template <class T, class... Args>
-struct is_function_type<T(Args...)> : std::true_type {};
-
 template <class... Items>
 struct typelist final {
 public:
