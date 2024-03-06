@@ -10,7 +10,6 @@
 #include "cuda/CudaAllocator.h"
 #include <cstddef>
 #include <iostream>
-#include <utility>
 #include <glog/logging.h>
 
 
@@ -47,21 +46,21 @@ int main(int argc, char* argv[]) {
   c10::RegistrationHandleRAII raii_cuda = c10::Dispatcher::singleton().registerImpl(
     c10::OperatorName("TEST", ""),
     c10::DispatchKey::CUDA,
-    c10::KernelFunction((void*)test_sum),
+    c10::KernelFunction::makeFromUnboxedRuntimeFunction(test_sum),
     std::nullopt,
     "test-debug-register-impl");
 
   c10::RegistrationHandleRAII raii_autograd = c10::Dispatcher::singleton().registerImpl(
     c10::OperatorName("TEST", ""),
     c10::DispatchKey::Autograd,
-    c10::KernelFunction((void*)test_sum_higher),
+    c10::KernelFunction::makeFromUnboxedRuntimeFunction(test_sum_higher),
     std::nullopt,
     "test-debug-register-impl");
 
     c10::RegistrationHandleRAII cpu = c10::Dispatcher::singleton().registerImpl(
     c10::OperatorName("TEST", ""),
     c10::DispatchKey::CPU,
-    c10::KernelFunction((void*)test_sum_highest),
+    c10::KernelFunction::makeFromUnboxedRuntimeFunction(test_sum_highest),
     std::nullopt,
     "test-debug-register-impl");
 
@@ -77,7 +76,7 @@ int main(int argc, char* argv[]) {
   c10::RegistrationHandleRAII allocator_cuda = c10::Dispatcher::singleton().registerImpl(
     c10::OperatorName("TEST_ALLOCATOR", ""),
     c10::DispatchKey::CUDA,
-    c10::KernelFunction((void*)allocate_memory),
+    c10::KernelFunction::makeFromUnboxedRuntimeFunction(allocate_memory),
     std::nullopt,
     "test-debug-register-impl");
 

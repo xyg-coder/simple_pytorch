@@ -7,7 +7,7 @@
 #include "utils/ArrayRef.h"
 #include <optional>
 
-namespace simpletorch::ops {
+namespace simpletorch::impl {
 
 Tensor empty_cuda(
   c10::Int64ArrayRef size,

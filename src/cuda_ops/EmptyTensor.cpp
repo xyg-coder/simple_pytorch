@@ -18,7 +18,7 @@
 #include <memory>
 #include <utility>
 
-namespace simpletorch::ops {
+namespace simpletorch::impl {
 
 constexpr uint64_t storage_max() {
   // int64_t and size_t are used somewhat inconsistently throughout ATen.

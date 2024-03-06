@@ -1,12 +1,11 @@
 #include <gtest/gtest.h>
 #include "Allocator.h"
 #include "CpuAllocator.h"
-#include "ScalarType.h"
-#include "cuda_ops/EmptyTensor.h"
 #include "Storage.h"
 #include "StorageImpl.h"
 #include "Tensor.h"
 #include "TensorImpl.h"
+#include "ops/EmptyOps.h"
 #include "utils/ArrayRef.h"
 
 // Demonstrate some basic assertions.
@@ -64,7 +63,7 @@ TEST(AllocationTest, DataDestructor) {
 TEST(AllocationTest, EmptyTensorSize) {
   std::array<int64_t, 2> size_array {5, 6};
 	c10::Int64ArrayRef size(size_array);
-	simpletorch::Tensor tensor = simpletorch::ops::empty_cuda(
+	simpletorch::Tensor tensor = simpletorch::ops::empty::call(
 		size, c10::ScalarType::Double, std::nullopt, std::nullopt);
   c10::Int64ArrayRef result_size = tensor.get_sizes();
   EXPECT_EQ(result_size.size(), size.size());

@@ -1,14 +1,17 @@
 #pragma once
 
+#include "dispatch/CppSignature.h"
 #include "dispatch/DispatchKey.h"
 #include "dispatch/FunctionSchema.h"
-#include "utils/TypeList.h"
+#include "dispatch/KernelFunction.h"
+#include "dispatch/RegistrationHandleRAII.h"
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 namespace c10 {
 
 /// Represents a C++ function that implements an operator.  Most users won't
@@ -23,7 +26,14 @@ public:
   template <typename Func>
   explicit CppFunction(
     Func* f,
-    std::enable_if_t<c10::guts::is_function_type<Func>::value, std::nullptr_t> = nullptr);
+    std::enable_if_t<c10::guts::is_function_type<Func>::value, std::nullptr_t> = nullptr):
+    func_(KernelFunction::makeFromUnboxedRuntimeFunction(f)),
+    cpp_signature_(CppSignature::make<Func>()) { }
+private:
+  KernelFunction func_;
+  CppSignature cpp_signature_;
+
+friend class Library;
 };
 
 /// This object provides the API for defining operators and providing
@@ -56,20 +66,34 @@ public:
     DEF,
     IMPL,
   };
-  Library(Kind kind, std::string ns, std::optional<c10::DispatchKey> k, const char* file, uint32_t line);
+  Library(Kind kind, std::string ns, std::optional<DispatchKey> k, const char* file, uint32_t line);
 
   Library(const Library&) = delete;
   Library& operator=(const Library&) = delete;
   Library(Library&&) = default;
   Library& operator=(Library&&) = default;
 
-  Library& impl_(FunctionSchema schema, CppFunction&& f);
+  Library& impl_(FunctionSchema&& schema, CppFunction&& f);
 
   template<typename Func>
-  Library& impl(FunctionSchema schema, Func&& raw_f) {
+  Library& impl(FunctionSchema&& schema, Func&& raw_f) {
     CppFunction f(std::forward<Func>(raw_f));
     return impl_(std::forward<FunctionSchema>(schema), std::move(f));
   }
+
+  Library& def(FunctionSchema&& schema) {
+    return _def(std::forward<FunctionSchema>(schema));
+  }
+
+  Library& _def(FunctionSchema&& schema);
+
+private:
+  Kind kind_;
+  std::string ns_;  // namespace
+  std::optional<DispatchKey> dispatch_key_opt_;
+  const char* file_;
+  uint32_t line_;
+  std::vector<RegistrationHandleRAII> registars_;
 };
 
 class TorchLibraryInit final {
@@ -98,7 +122,7 @@ public:
     std::nullopt,                                                     \
     __FILE__,                                                         \
     __LINE__);                                                        \
-  void TORCH_LIBRARY_init_##ns(c10::Library& m)
+  void TORCH_LIBRARY_INIT_##ns(c10::Library& m)
 
 
 /// Macro for defining a function that will be run at static
@@ -141,7 +165,7 @@ public:
 ///
 // NB: if the dispatch key is not whitelisted, we simply omit the Library
 // call entirely
-#define TORCH_LIBRARY_IMPL(ns, k, m)
+#define TORCH_LIBRARY_IMPL(ns, k, m) _TORCH_LIBRARY_IMPL(ns, k, m, C10_UID)
 
 #define _TORCH_LIBRARY_IMPL(ns, k, m, uid)                                                                \
   static void C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid)(c10::Library&);                 \
@@ -149,7 +173,7 @@ public:
     c10::Library::IMPL,                                                                                   \
     &C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid),                                         \
     #ns,                                                                                                  \
-    std::make_optional(c10::DispatchKey::k),                                                              \
+    std::optional<c10::DispatchKey>(c10::DispatchKey::k),                                                 \
     __FILE__,                                                                                             \
     __LINE__);                                                                                            \
   void C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid)(c10::Library& m)
