@@ -10,7 +10,6 @@
 #include "cuda/CudaAllocator.h"
 #include <cstddef>
 #include <iostream>
-#include <utility>
 #include <glog/logging.h>
 
 

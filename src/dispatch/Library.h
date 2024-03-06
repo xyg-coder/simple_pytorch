@@ -7,7 +7,6 @@
 #include "dispatch/RegistrationHandleRAII.h"
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -32,6 +31,8 @@ public:
 private:
   KernelFunction func_;
   CppSignature cpp_signature_;
+
+friend class Library;
 };
 
 /// This object provides the API for defining operators and providing
@@ -163,7 +164,7 @@ public:
 ///
 // NB: if the dispatch key is not whitelisted, we simply omit the Library
 // call entirely
-#define TORCH_LIBRARY_IMPL(ns, k, m)
+#define TORCH_LIBRARY_IMPL(ns, k, m) _TORCH_LIBRARY_IMPL(ns, k, m, C10_UID)
 
 #define _TORCH_LIBRARY_IMPL(ns, k, m, uid)                                                                \
   static void C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid)(c10::Library&);                 \
@@ -171,7 +172,7 @@ public:
     c10::Library::IMPL,                                                                                   \
     &C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid),                                         \
     #ns,                                                                                                  \
-    std::make_optional(c10::DispatchKey::k),                                                              \
+    c10::DispatchKey::k,                                                              \
     __FILE__,                                                                                             \
     __LINE__);                                                                                            \
   void C10_CONCATENATE(TORCH_LIBRARY_IMPL_init_##ns##_##k##_, uid)(c10::Library& m)
