@@ -18,3 +18,5 @@
 
 #define STATIC_CONSTEXPR_STR(field, val) \
   static constexpr const char* field = val;
+
+#define C10_WRAP_SIZE 32
