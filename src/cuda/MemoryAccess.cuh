@@ -1,11 +1,14 @@
 #pragma once
 
 #include "cuda/ThreadConstants.h"
+#include "macros/Macros.h"
+#include "utils/Metaprogramming.h"
+#include <algorithm>
 #include <cstdint>
 #include <tuple>
+#include <type_traits>
 
 namespace c10::cuda {
-
 namespace {
 
 // What does the `static_unroll` do?
@@ -38,7 +41,7 @@ struct static_unroll<func, end, end> {
   static inline void with_args(Args... args) { }
 };
 
-template<template<int i>typename func, int vec_size, int end, int current=0> 
+template<template<int i, int j>typename func, int vec_size, int end, int current=0> 
 struct static_unroll_with_vec_size {
   template<typename... Args>
   static inline void with_args(Args&&... args) {
@@ -47,24 +50,62 @@ struct static_unroll_with_vec_size {
   }
 };
 
-template<template<int i>typename func, int vec_size, int end>
+template<template<int i, int j>typename func, int vec_size, int end>
 struct static_unroll_with_vec_size<func, vec_size, end, end> {
   template<typename... Args>
   static inline void with_args(Args... args) { }
 };
+} // anonymous namespace
 
+namespace memory {
 template<typename scalar_t, int vec_size>
 struct alignas(sizeof(scalar_t) * vec_size) aligned_vector {
   scalar_t val[vec_size];
 };
-} // anonymous namespace
+// This is only used in host, but we will wrap this into some templates
+// which is C10_HOST_DEVICE, so we have to make this C10_HOST_DEVICE
+// in order to compile
+template<typename scalar_t>
+inline C10_HOST int can_vectorize_up_to(char *pointer) {
+  uint64_t address = reinterpret_cast<uint64_t>(pointer);
+  constexpr int vec2_aligment = std::alignment_of_v<aligned_vector<scalar_t, 2>>;
+  constexpr int vec4_aligment = std::alignment_of_v<aligned_vector<scalar_t, 4>>;
+  if (address % vec4_aligment == 0) {
+    return 4;
+  } else if (address % vec2_aligment == 0) {
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
+template<int arg_index>
+struct can_vectorize_up_to_helper {
+  template<typename array_t, typename func_traits>
+  static C10_HOST_DEVICE void apply(int& result, array_t pointers, func_traits _) {
+    using arg_t = std::tuple_element_t<arg_index, typename func_traits::parameter_types>;
+    result = std::min<int>(result, can_vectorize_up_to<arg_t>(pointers[arg_index + 1]));
+  }
+};
+
+// check if all args and return of func_t can be vectorized
+template<typename func_t, typename array_t>
+inline C10_HOST int can_vectorize_up_to(array_t pointers) {
+  using traits = guts::function_traits<func_t>;
+  int result = can_vectorize_up_to<traits::return_type>(pointers[0]);
+  static_unroll<can_vectorize_up_to_helper, traits::number_of_parameters>(result, pointers, traits());
+  return result;
+}
+
+}// namespace c10::cuda:: memory
+
 
 namespace policies {
 struct LoadWithoutCast {
 
   template<typename scalar_t>
   __device__ scalar_t load(char* base_ptr, uint32_t offset, int arg=0) {
-    scalar_t* base_ptr_scalar = std::reinterpret_cast<scalar_t*>(base_ptr);
+    scalar_t* base_ptr_scalar = reinterpret_cast<scalar_t*>(base_ptr);
     return *(base_ptr_scalar + offset);
   }
 };
@@ -73,7 +114,7 @@ struct StoreWithoutCast {
 
   template<typename scalar_t>
   __device__ void store(scalar_t value, char* base_ptr, uint32_t offset, int arg=0) {
-    scalar_t* base_ptr_scalar = std::reinterpret_cast<scalar_t*>(base_ptr);
+    scalar_t* base_ptr_scalar = reinterpret_cast<scalar_t*>(base_ptr);
     *(base_ptr_scalar + offset) = value;
   }
 };
@@ -91,11 +132,11 @@ struct unroll_load_helper {
 template<int arg_index, int vec_size>
 struct vectorized_load_helper {
   template<typename args_t, typename policy_t>
-  static __device__ void apply(policy_t &self, args_t *args, int loop_i) {
+  static __device__ void apply(policy_t &self, args_t *args, int loop_i, int idx) {
     using arg_t = std::tuple_element_t<arg_index, args_t>;
-    using vec_args_t = aligned_vector<arg_t, vec_size>;
-    auto ptr = std::reinterpret_cast<arg_t*>(data[1 + arg_index]) + idx * block_work_size() + loop_i * num_threads() * vec_size;
-    vec_args_t* ptr_ = std::reinterpret_cast<vec_args_t*>(ptr);
+    using vec_args_t = c10::cuda::memory::aligned_vector<arg_t, vec_size>;
+    auto ptr = reinterpret_cast<arg_t*>(self.data[1 + arg_index]) + idx * block_work_size() + loop_i * num_threads() * vec_size;
+    vec_args_t* ptr_ = reinterpret_cast<vec_args_t*>(ptr);
     vec_args_t vec_arg = *ptr_;
     #pragma unroll
     for (int i = 0; i < vec_size; ++i) {
@@ -119,7 +160,7 @@ struct unroll {
   __device__ unroll(data_t data, int remaining, inp_calc_t ic, out_calc_t oc, loader_t l, storer_t s):
     data(data), remaining(remaining), input_offset_calculator(ic), output_offset_calculator(oc), loader(l), storer(s) {}
   
-  __device__ check_inbounds(int thread_work_elem) {
+  __device__ bool check_inbounds(int thread_work_elem) {
     return threadIdx.x + thread_work_elem * num_threads() < remaining;
   }
 
@@ -128,11 +169,11 @@ struct unroll {
   __device__ inline void load(args_t* args, int idx) {
     // number of arguments
     constexpr int arity = std::tuple_size_v<args_t>;
-    int threadIdx = threadIdx.x;
+    int thread_idx = threadIdx.x;
 
     #pragma unroll
     for (int i = 0; i < thread_work_size(); ++i) {
-      if (threadIdx >= remaining) {
+      if (thread_idx >= remaining) {
         return;
       }
 
@@ -147,25 +188,25 @@ struct unroll {
       auto offset = input_offset_calculator.get(linear_idx);
 
       static_unroll<unroll_load_helper, arity>::with_args(*this, args, offset, loader, i, num_outputs);
-      threadIdx += num_threads();
+      thread_idx += num_threads();
     }
   }
 
   template<typename scalar_t>
   __device__ inline void store(scalar_t *from, int idx) {
-    int threadIdx = threadIdx.x;
+    int thread_idx = threadIdx.x;
 
     #pragma unroll
     for (int i = 0; i < thread_work_size(); ++i) {
-      if (threadIdx >= remaining) {
+      if (thread_idx >= remaining) {
         return;
       }
-      int linear_idx = threadIdx + block_work_size() * idx;
+      int linear_idx = thread_idx + block_work_size() * idx;
       // we only have 1 output
       int offset = output_offset_calculator.get(linear_idx)[0];
       storer.store(from[i], data[0], offset);
 
-      threadIdx += num_threads();
+      thread_idx += num_threads();
     }
   }
 };
@@ -190,20 +231,20 @@ struct vectorized {
 
   template<typename args_t>
   __device__ inline void load(args_t* args, int idx) {
-    constexpr narity = std::tuple_size_v<args_t>;
+    constexpr int narity = std::tuple_size_v<args_t>;
     #pragma unroll
     for (int i = 0; i < loop_size; ++i) {
-      static_unroll_with_vec_size<vectorized_load_helper, vec_size, narity>(*this, args, i);
+      static_unroll_with_vec_size<vectorized_load_helper, vec_size, narity>(*this, args, i, idx);
     }
   }
 
   template<typename scalar_t>
   __device__ inline void store(scalar_t* from, int idx) {
-    using vec_scalar = aligned_vector<scalar_t, vec_size>;
-    int threadIdx = threadIdx.x;
-    int offset = idx * block_work_size() + threadIdx * vec_size;
-    scalar_t* to = std::reinterpret_cast<scalar_t*>(data[0]) + offset;
-    vec_scalar* to_ = std::reinterpret_cast<vec_scalar*>(to);
+    using vec_scalar = c10::cuda::memory::aligned_vector<scalar_t, vec_size>;
+    int thread_idx = threadIdx.x;
+    int offset = idx * block_work_size() + thread_idx * vec_size;
+    scalar_t* to = reinterpret_cast<scalar_t*>(data[0]) + offset;
+    vec_scalar* to_ = reinterpret_cast<vec_scalar*>(to);
     #pragma unroll
     for (int i = 0; i < loop_size; ++i) {
       vec_scalar tmp;
@@ -211,7 +252,7 @@ struct vectorized {
       for (int j = 0; j < vec_size; ++j) {
         tmp.val[j] = from[i * vec_size + j];
       }
-      to_[num_threads() * i + threadIdx] = tmp;
+      to_[num_threads() * i + thread_idx] = tmp;
     }
   }
 };
