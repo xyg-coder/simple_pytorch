@@ -4,6 +4,7 @@
 #include "utils/Array.h"
 #include "utils/Exception.h"
 #include <cuda_runtime.h>
+#include <glog/logging.h>
   
 struct FillFunctor {
   FillFunctor(int v): value(v) {}
@@ -57,7 +58,7 @@ void check_add() {
   auto data = c10::Array<decltype(d_a), 3>();
   data[0] = d_c;
   data[1] = d_b;
-  data[2] = d_c;
+  data[2] = d_a;
 
   c10::cuda::launch_vectorized_kernel(n, FillFunctor(100), c10::Array<decltype(d_a), 1>(d_a));
   c10::cuda::launch_vectorized_kernel(n, FillFunctor(200), c10::Array<decltype(d_a), 1>(d_b));
@@ -77,7 +78,8 @@ void check_add() {
   delete[] h_sum;
 }
   
-int main() {
+int main(int argc, char* argv[]) {
+  google::InitGoogleLogging(argv[0]);
   check_fill();
   check_add();
   return 0;  

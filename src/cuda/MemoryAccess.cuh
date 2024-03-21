@@ -5,7 +5,6 @@
 #include "utils/Metaprogramming.h"
 #include <cstdint>
 #include <tuple>
-#include <type_traits>
 
 namespace c10::cuda {
 namespace {
@@ -65,7 +64,7 @@ struct alignas(sizeof(scalar_t) * vec_size) aligned_vector {
 // which is C10_HOST_DEVICE, so we have to make this C10_HOST_DEVICE
 // in order to compile
 template<typename scalar_t>
-inline C10_HOST int can_vectorize_up_to(char *pointer) {
+inline C10_HOST_DEVICE int can_vectorize_up_to(char *pointer) {
   uint64_t address = reinterpret_cast<uint64_t>(pointer);
   constexpr int vec2_aligment = std::alignment_of_v<aligned_vector<scalar_t, 2>>;
   constexpr int vec4_aligment = std::alignment_of_v<aligned_vector<scalar_t, 4>>;
@@ -83,13 +82,13 @@ struct can_vectorize_up_to_helper {
   template<typename array_t, typename func_traits>
   static C10_HOST_DEVICE void apply(int& result, array_t pointers, func_traits _) {
     using arg_t = std::tuple_element_t<arg_index, typename func_traits::ArgsTuple>;
-    result = std::min<int>(result, can_vectorize_up_to<arg_t>(pointers[arg_index + 1]));
+    result = std::min<int>(result, can_vectorize_up_to<arg_t>(reinterpret_cast<char*>(pointers[arg_index + 1])));
   }
 };
 
 // check if all args and return of func_t can be vectorized
 template<typename func_t, typename array_t>
-inline C10_HOST int can_vectorize_up_to(array_t pointers) {
+inline C10_HOST_DEVICE int can_vectorize_up_to(array_t pointers) {
   using traits = guts::infer_function_traits_t<func_t>;
   int result = can_vectorize_up_to<typename traits::return_type>(reinterpret_cast<char*>(pointers[0]));
   static_unroll<can_vectorize_up_to_helper, traits::number_of_parameters>::with_args(result, pointers, traits());
@@ -122,9 +121,10 @@ template<int arg_index>
 struct unroll_load_helper {
   template<typename args_t, typename policy_t, typename offset_t, typename loader_t>
   static __device__ void apply(policy_t &self, args_t *args, offset_t offset, loader_t loader, int j, int num_outputs) {
+    using arg_t = std::tuple_element_t<arg_index, args_t>;
     // `data` hold the data_ptr for tensors [output, input0, input1, ...]
     // each element in the array holds the parameters for the arg_index
-    std::get<arg_index>(args[j]) = loader.template load<args_t>(self.data[arg_index + num_outputs], offset[arg_index], arg_index);
+    std::get<arg_index>(args[j]) = loader.template load<arg_t>(reinterpret_cast<char*>(self.data[arg_index + num_outputs]), offset[arg_index], arg_index);
   }
 };
 

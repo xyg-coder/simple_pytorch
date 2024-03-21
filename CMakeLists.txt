@@ -120,3 +120,5 @@ gtest_discover_tests(dispatcher_test)
 gtest_discover_tests(library_test)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
+# Set CUDA compile options, this makes us able to use static expressions in cuda
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
