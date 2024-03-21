@@ -251,7 +251,7 @@ struct vectorized {
       for (int j = 0; j < vec_size; ++j) {
         tmp.val[j] = from[i * vec_size + j];
       }
-      to_[num_threads() * i + thread_idx] = tmp;
+      to_[num_threads() * i] = tmp;
     }
   }
 };

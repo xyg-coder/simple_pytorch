@@ -8,6 +8,7 @@
 #include "cuda/MemoryAccess.cuh"
 #include "utils/Apply.h"
 #include "utils/Exception.h"
+#include "utils/Logging.h"
 #include "utils/Metaprogramming.h"
 #include <cstdint>
 #include <limits>
@@ -92,6 +93,7 @@ static inline void launch_vectorized_kernel(
   int64_t grid = (N + block_work_size() - 1) / block_work_size();
   auto stream = getCurrentCUDAStream();
   int vec_size = memory::can_vectorize_up_to<func_t>(data);
+  LOG_INFO("launch_vectorized_kernel, vec_size=", vec_size);
   switch (vec_size) {
     case 4:
       vectorized_elementwise_kernel<4><<<grid, num_threads(), 0, stream>>>(N, f, data);
