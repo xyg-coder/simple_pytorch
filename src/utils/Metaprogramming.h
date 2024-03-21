@@ -2,6 +2,7 @@
 
 #include "utils/TypeList.h"
 #include "utils/TypeTraits.h"
+#include <tuple>
 #include <type_traits>
 namespace c10::guts {
 /**
@@ -24,6 +25,8 @@ struct function_traits<Result(Args...)> {
   using return_type = Result;
   using parameter_types = typelist::typelist<Args...>;
   static constexpr auto number_of_parameters = sizeof...(Args);
+
+  typedef std::tuple<Args...> ArgsTuple;
 };
 
 template <typename Result, typename Arglist>

@@ -167,6 +167,25 @@ static_assert(
     infer_function_traits<int(*)(bool*, bool)>::type::parameter_types,
     typelist::typelist<bool*, bool>>::value);
 
+// test functor
+struct MockFunctor {
+  int operator() (int a, int b) {
+    return a + b;
+  }
+};
+
+static_assert(typelist::arg_list_compare<
+    infer_function_traits<MockFunctor>::type::parameter_types,
+    typelist::typelist<int, int>>::value);
+
+static_assert(
+  std::is_same<infer_function_traits<MockFunctor>::type::return_type,
+    int>::value);
+
+// test tuple args
+static_assert(
+  std::is_same<std::tuple_element_t<0, infer_function_traits<MockFunctor>::type::ArgsTuple>, int>::value);
+
 //////////////////////
 // DispatchKeySet.h
 //////////////////////

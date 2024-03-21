@@ -6,6 +6,7 @@
 #include "cuda/ThreadConstants.h"
 #include "macros/Macros.h"
 #include "cuda/MemoryAccess.cuh"
+#include "utils/Apply.h"
 #include "utils/Exception.h"
 #include "utils/Metaprogramming.h"
 #include <cstdint>
@@ -16,10 +17,10 @@
 namespace c10::cuda {
 
 template <typename func_t, typename policy_t>
-__device__ inline void elementwise_kernel_helper(func_t f, policy_t policy) {
-  using traits = c10::guts::function_traits<func_t>;
+C10_HOST_DEVICE inline void elementwise_kernel_helper(func_t f, policy_t policy) {
+  using traits = c10::guts::infer_function_traits_t<func_t>;
   using return_t = typename traits::return_type;
-  using args_t = typename traits::parameter_types;
+  using args_t = typename traits::ArgsTuple;
 
   int idx = blockIdx.x;
   return_t result[thread_work_size()];
@@ -32,7 +33,7 @@ __device__ inline void elementwise_kernel_helper(func_t f, policy_t policy) {
   #pragma unroll
   for (int i = 0; i < thread_work_size(); ++i) {
     if (policy.check_inbounds(i)) {
-      result[i] = std::apply(
+      result[i] = c10::guts::apply(
         std::move(f),
         std::move(args[i]));
     }
@@ -45,7 +46,7 @@ __device__ inline void elementwise_kernel_helper(func_t f, policy_t policy) {
 template<int vec_size, typename func_t, typename array_t>
 C10_LAUNCH_BOUNDS_1(num_threads())
 __global__ void vectorized_elementwise_kernel(int N, func_t f, array_t data) {
-  using traits = guts::function_traits<func_t>;
+  using traits = guts::infer_function_traits_t<func_t>;
   int remaining = N - block_work_size() * blockIdx.x;
   if (remaining >= block_work_size()) {
     elementwise_kernel_helper(
@@ -74,7 +75,7 @@ template<
 C10_LAUNCH_BOUNDS_1(num_threads())
 __global__ void unrolled_element_wise_kernel(
   int N, func_t f, array_t data, input_calc_t ic, output_calc_t oc, loader_t l, storer_t s) {
-  using traits = guts::function_traits<func_t>;
+  using traits = guts::infer_function_traits_t<func_t>;
   auto policy = policies::unroll<
     array_t, decltype(ic), decltype(oc), policies::LoadWithoutCast,
     policies::StoreWithoutCast>(
@@ -87,7 +88,7 @@ static inline void launch_vectorized_kernel(
   int64_t N, const func_t& f, array_t data) {
   
   TORCH_CHECK(N > 0 && N <= std::numeric_limits<int32_t>::max());
-  using traits = guts::function_traits<func_t>;
+  using traits = guts::infer_function_traits_t<func_t>;
   int64_t grid = (N + block_work_size() - 1) / block_work_size();
   auto stream = getCurrentCUDAStream();
   int vec_size = memory::can_vectorize_up_to<func_t>(data);

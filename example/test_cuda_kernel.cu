@@ -1,6 +1,6 @@
 #include "cuda/Loops.cuh"
-#include "macros/Macros.h"
 #include "utils/Array.h"
+#include "utils/Exception.h"
 #include <stdio.h>
 #include <cuda_runtime.h>
   
@@ -15,7 +15,7 @@ private:
 };
   
 int main() {  
-  int n = 100;
+  int n = 100000;
   int *d_a;
   int *h_a = new int[n];
 
@@ -27,7 +27,7 @@ int main() {
   cudaMemcpy(h_a, d_a, n * sizeof(int), cudaMemcpyDeviceToHost);  
 
   for (int i = 0; i < n; i++) {  
-      printf("%d\n", h_a[i]);  
+    TORCH_CHECK(h_a[i] == 100, "h_a[", i, "]=", h_a[i]);
   }  
 
   cudaFree(d_a);  

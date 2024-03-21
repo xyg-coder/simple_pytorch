@@ -3,7 +3,6 @@
 #include "cuda/ThreadConstants.h"
 #include "macros/Macros.h"
 #include "utils/Metaprogramming.h"
-#include <algorithm>
 #include <cstdint>
 #include <tuple>
 #include <type_traits>
@@ -29,7 +28,7 @@ namespace {
 template<template<int i>typename func, int end, int current=0>
 struct static_unroll {
   template<typename... Args>
-  static inline void with_args(Args&&... args) {
+  static inline C10_HOST_DEVICE void with_args(Args&&... args) {
     func<current>::apply(std::forward<Args>(args)...);
     static_unroll<func, end, current+1>::with_args(args...);
   }
@@ -38,13 +37,13 @@ struct static_unroll {
 template<template<int i>typename func, int end>
 struct static_unroll<func, end, end> {
   template<typename... Args>
-  static inline void with_args(Args... args) { }
+  static inline C10_HOST_DEVICE void with_args(Args... args) { }
 };
 
 template<template<int i, int j>typename func, int vec_size, int end, int current=0> 
 struct static_unroll_with_vec_size {
   template<typename... Args>
-  static inline void with_args(Args&&... args) {
+  static inline C10_HOST_DEVICE void with_args(Args&&... args) {
     func<current, vec_size>::apply(std::forward<Args>(args)...);
     static_unroll_with_vec_size<func, vec_size, end, current+1>::with_args(args...);
   }
@@ -53,7 +52,7 @@ struct static_unroll_with_vec_size {
 template<template<int i, int j>typename func, int vec_size, int end>
 struct static_unroll_with_vec_size<func, vec_size, end, end> {
   template<typename... Args>
-  static inline void with_args(Args... args) { }
+  static inline C10_HOST_DEVICE void with_args(Args... args) { }
 };
 } // anonymous namespace
 
@@ -83,7 +82,7 @@ template<int arg_index>
 struct can_vectorize_up_to_helper {
   template<typename array_t, typename func_traits>
   static C10_HOST_DEVICE void apply(int& result, array_t pointers, func_traits _) {
-    using arg_t = std::tuple_element_t<arg_index, typename func_traits::parameter_types>;
+    using arg_t = std::tuple_element_t<arg_index, typename func_traits::ArgsTuple>;
     result = std::min<int>(result, can_vectorize_up_to<arg_t>(pointers[arg_index + 1]));
   }
 };
@@ -91,9 +90,9 @@ struct can_vectorize_up_to_helper {
 // check if all args and return of func_t can be vectorized
 template<typename func_t, typename array_t>
 inline C10_HOST int can_vectorize_up_to(array_t pointers) {
-  using traits = guts::function_traits<func_t>;
-  int result = can_vectorize_up_to<traits::return_type>(pointers[0]);
-  static_unroll<can_vectorize_up_to_helper, traits::number_of_parameters>(result, pointers, traits());
+  using traits = guts::infer_function_traits_t<func_t>;
+  int result = can_vectorize_up_to<typename traits::return_type>(reinterpret_cast<char*>(pointers[0]));
+  static_unroll<can_vectorize_up_to_helper, traits::number_of_parameters>::with_args(result, pointers, traits());
   return result;
 }
 
@@ -204,7 +203,7 @@ struct unroll {
       int linear_idx = thread_idx + block_work_size() * idx;
       // we only have 1 output
       int offset = output_offset_calculator.get(linear_idx)[0];
-      storer.store(from[i], data[0], offset);
+      storer.store(from[i], reinterpret_cast<char*>(data[0]), offset);
 
       thread_idx += num_threads();
     }
@@ -234,7 +233,7 @@ struct vectorized {
     constexpr int narity = std::tuple_size_v<args_t>;
     #pragma unroll
     for (int i = 0; i < loop_size; ++i) {
-      static_unroll_with_vec_size<vectorized_load_helper, vec_size, narity>(*this, args, i, idx);
+      static_unroll_with_vec_size<vectorized_load_helper, vec_size, narity>::with_args(*this, args, i, idx);
     }
   }
 
