@@ -86,11 +86,17 @@ add_executable(
   ${SOURCES}
   test/library_test.cpp
 )
+add_executable(
+  vectorized_unroll_kernel_test
+  ${SOURCES}
+  test/vectorized_unrolled_kernel_test.cu
+)
 target_include_directories(allocator_test PRIVATE ${INCLUDES})
 target_include_directories(cuda_allocator_test PRIVATE ${INCLUDES})
 target_include_directories(metaprogramming_test PRIVATE ${INCLUDES})
 target_include_directories(dispatcher_test PRIVATE ${INCLUDES})
 target_include_directories(library_test PRIVATE ${INCLUDES})
+target_include_directories(vectorized_unroll_kernel_test PRIVATE ${INCLUDES})
 target_link_libraries(
   allocator_test
   ${TEST_LIBS}
@@ -111,6 +117,10 @@ target_link_libraries(
   library_test
   ${TEST_LIBS}
 )
+target_link_libraries(
+  vectorized_unroll_kernel_test
+  ${TEST_LIBS}
+)
 
 include(GoogleTest)
 gtest_discover_tests(allocator_test)
@@ -118,6 +128,7 @@ gtest_discover_tests(cuda_allocator_test)
 gtest_discover_tests(metaprogramming_test)
 gtest_discover_tests(dispatcher_test)
 gtest_discover_tests(library_test)
+gtest_discover_tests(vectorized_unroll_kernel_test)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 # Set CUDA compile options, this makes us able to use static expressions in cuda

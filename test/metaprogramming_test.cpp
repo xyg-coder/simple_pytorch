@@ -137,8 +137,17 @@ static_assert(
     make_function_traits<int, typelist::typelist<bool, bool>>::type::parameter_types,
     typelist::typelist<bool, bool>>::value);
 
+int add(int a, int b) {
+  return a + b;
+}
+
 static_assert(
   std::is_same<infer_function_traits<int(bool, bool)>::type::return_type,
+    int>::value
+);
+
+static_assert(
+  std::is_same<infer_function_traits<decltype(add)>::type::return_type,
     int>::value
 );
 
@@ -185,6 +194,9 @@ static_assert(
 // test tuple args
 static_assert(
   std::is_same<std::tuple_element_t<0, infer_function_traits<MockFunctor>::type::ArgsTuple>, int>::value);
+
+static_assert(
+  std::is_same<std::tuple_element_t<0, infer_function_traits<decltype(add)>::type::ArgsTuple>, int>::value);
 
 //////////////////////
 // DispatchKeySet.h

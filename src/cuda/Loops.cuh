@@ -11,6 +11,7 @@
 #include "utils/Logging.h"
 #include "utils/Metaprogramming.h"
 #include <cstdint>
+#include <iostream>
 #include <limits>
 #include <tuple>
 #include <utility>
@@ -116,6 +117,24 @@ static inline void launch_vectorized_kernel(
     default:
       TORCH_CHECK(false, "Unexpected vectorization size");
   }
+}
+
+template<typename func_t, typename array_t>
+static inline void launch_unrolled_kernel(
+  int64_t N, const func_t& f, array_t data) {
+
+  TORCH_CHECK(N > 0 && N <= std::numeric_limits<int32_t>::max());
+  using traits = guts::infer_function_traits_t<func_t>;
+  int64_t grid = (N + block_work_size() - 1) / block_work_size();
+  auto stream = getCurrentCUDAStream();
+
+  auto input_calc = TrivialOffsetCalculator<traits::number_of_parameters>();
+  auto output_calc = TrivialOffsetCalculator<1>();
+  auto loader = policies::LoadWithoutCast();
+  auto storer = policies::StoreWithoutCast();
+  unrolled_element_wise_kernel<<<
+    grid, num_threads(), 0, stream>>>(N, f, data, input_calc, output_calc, loader, storer);
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
 }
 
 } // namespace c10::cuda
