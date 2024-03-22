@@ -33,6 +33,11 @@ public:
   /// Explicit conversion to cudaStream_t.
   cudaStream_t stream() const;
 
+  /// Implicit conversion to cudaStream_t.
+  operator cudaStream_t() const {
+    return stream();
+  }
+
   /// Explicit conversion to Stream.
   Stream unwrap() const {
     return stream_;

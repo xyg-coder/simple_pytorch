@@ -26,6 +26,12 @@ void c10_cuda_check_implementation(
   check_message.append("CUDA error: ");
   check_message.append(cudaGetErrorString(cuda_error));
   check_message.append("\n");
-  TORCH_CHECK(false, check_message);
+  // so we can pass down the filenames
+  torchCheckFail(
+    function_name,
+    filename,
+    line_number,
+    TORCH_CHECK_MSG(false, "", check_message)
+  );
 }
 }

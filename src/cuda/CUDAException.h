@@ -31,3 +31,8 @@ void c10_cuda_check_implementation(
     static_cast<uint32_t>(__LINE__),          \
     false);                                   \
   } while(0)
+
+// This should be used directly after every kernel launch to ensure
+// the launch happened correctly and provide an early, close-to-source
+// diagnostic if it didn't.
+#define C10_CUDA_KERNEL_LAUNCH_CHECK() C10_CUDA_CHECK(cudaGetLastError())
