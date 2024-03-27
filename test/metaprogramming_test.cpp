@@ -161,6 +161,11 @@ static_assert(
 );
 
 static_assert(
+  std::is_same<infer_function_traits<int(bool&, const bool&)>::type::func_type,
+    int(bool&, const bool&)>::value
+);
+
+static_assert(
   typelist::arg_list_compare<
     infer_function_traits<int(bool, bool)>::type::parameter_types,
     typelist::typelist<bool, bool>>::value);

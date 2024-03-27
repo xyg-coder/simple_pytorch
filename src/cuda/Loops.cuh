@@ -11,7 +11,6 @@
 #include "utils/Exception.h"
 #include "utils/Logging.h"
 #include "utils/Metaprogramming.h"
-#include <array>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -140,7 +139,7 @@ static inline void launch_unrolled_kernel(
 template <typename func_t>
 void gpu_kernel_impl_nocast(simpletorch::TensorIterator& iter, const func_t& f) {
   using traits = guts::infer_function_traits_t<func_t>;
-  using arg0_t = typename traits::result_type;
+  using arg0_t = typename traits::return_type;
   constexpr int ntensors = traits::number_of_parameters + 1;
   TORCH_CHECK(iter.can_use_32bit_indexing());
   TORCH_CHECK(iter.ninputs() == ntensors - 1);

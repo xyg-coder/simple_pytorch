@@ -2,6 +2,7 @@
 
 #include "Scalar.h"
 #include "ScalarType.h"
+#include "Tensor.h"
 #include "TensorIterator.h"
 #include "cuda/Loops.cuh"
 #include "utils/Exception.h"
@@ -17,8 +18,6 @@ struct FillFunctor {
     scalar_t value;
 };
 
-
-
 void fill_kernel_scalar_cuda(TensorIterator& iter, const c10::Scalar& value) {
 #define DEFINE_SCALAR_TYPE_CASE(type, name) \
 case c10::ScalarType::name: \
@@ -31,6 +30,12 @@ switch (iter.dtype()) {
 }
 
 #undef DEFINE_SCALAR_TYPE_CASE
+}
+
+Tensor& fill_out(Tensor& self, const c10::Scalar& value) {
+  auto iter = TensorIteratorConfig().build();
+  fill_kernel_scalar_cuda(iter, value);
+  return self;
 }
 
 } // namespace simpletorch::impl

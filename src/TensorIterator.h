@@ -15,5 +15,13 @@ public:
   int ninputs() const;
   int noutputs() const;
   void* data_ptr(int64_t arg) const;
+private:
+
 };
+
+class TensorIteratorConfig final {
+public:
+  TensorIterator build();
+};
+
 };
