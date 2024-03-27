@@ -119,6 +119,10 @@ static_assert(typelist::arg_list_compare<typelist::typelist<int, double>, typeli
 static_assert(!typelist::arg_list_compare<typelist::typelist<int, double>, typelist::typelist<int, bool>>::value);
 static_assert(!typelist::arg_list_compare<typelist::typelist<int, double>, typelist::typelist<int>>::value);
 
+static_assert(typelist::arg_type_inside<int, typelist::typelist<int, float>>::value);
+static_assert(typelist::arg_type_inside<int, typelist::typelist<int>>::value);
+static_assert(!typelist::arg_type_inside<int, typelist::typelist<float, double>>::value);
+
 //////////////////////
 // Metaprogramming.h
 //////////////////////
