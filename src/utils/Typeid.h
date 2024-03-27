@@ -31,6 +31,10 @@ public:
     return scalarTypeItemSizes[index_];
   }
 
+  inline ScalarType toScalarType() const {
+    return static_cast<ScalarType>(index_);
+  }
+
 private:
   uint16_t index_;
 
