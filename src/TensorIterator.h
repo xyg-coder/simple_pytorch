@@ -23,6 +23,9 @@ OperandInfo& operator=(OperandInfo&&) noexcept = default;
 explicit OperandInfo(Tensor&& t): target_dtype(t.scalar_type()),
   current_dtype(t.scalar_type()), tensor_(std::move(t)) { }
 
+explicit OperandInfo(const Tensor& t): target_dtype(t.scalar_type()),
+  current_dtype(t.scalar_type()), tensor_(t) { }
+
 ~OperandInfo() = default;
 
 private:

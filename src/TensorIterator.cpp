@@ -43,7 +43,7 @@ void TensorIterator::populate_operands(const TensorIteratorConfig& config) {
   
   for (int i = 0; i < config.tensor_.size(); ++i) {
     auto& tensor = config.tensor_[i];
-    operands_.emplace_back(std::move(tensor));
+    operands_.emplace_back(tensor);
   }
   num_outputs_ = config.num_outputs_;
 }

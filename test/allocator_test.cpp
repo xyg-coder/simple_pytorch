@@ -1,12 +1,14 @@
 #include <gtest/gtest.h>
 #include "Allocator.h"
 #include "CpuAllocator.h"
+#include "ScalarType.h"
 #include "Storage.h"
 #include "StorageImpl.h"
 #include "Tensor.h"
 #include "TensorImpl.h"
 #include "ops/EmptyOps.h"
 #include "utils/ArrayRef.h"
+#include "utils/Typeid.h"
 
 // Demonstrate some basic assertions.
 TEST(AllocationTest, TensorCopy) {
@@ -14,12 +16,12 @@ TEST(AllocationTest, TensorCopy) {
 
   simpletorch::Storage storage(
       std::make_shared<simpletorch::StorageImpl>(100 * sizeof(int), &allocator));
-  simpletorch::Tensor tensor(std::make_shared<simpletorch::TensorImpl>(std::move(storage)));
+  simpletorch::Tensor tensor(std::make_shared<simpletorch::TensorImpl>(std::move(storage), c10::TypeMeta::fromScalarType(c10::ScalarType::Int)));
   simpletorch::Tensor tensor2 = tensor;
   simpletorch::Tensor tensor3 = tensor;
   // Expect equality.
-  EXPECT_EQ(tensor.get_unsafe_data(), tensor2.get_unsafe_data());
-  EXPECT_EQ(tensor.get_unsafe_data(), tensor3.get_unsafe_data());
+  EXPECT_EQ(tensor.const_data_ptr(), tensor2.const_data_ptr());
+  EXPECT_EQ(tensor.const_data_ptr(), tensor3.const_data_ptr());
 }
 
 void helper_for_copy(int &count) {
@@ -30,7 +32,7 @@ void helper_for_copy(int &count) {
   c10::NaiveCpuAllocator allocator(delete_fn);
   simpletorch::Storage storage(
       std::make_shared<simpletorch::StorageImpl>(100 * sizeof(int), &allocator));
-  simpletorch::Tensor tensor(std::make_shared<simpletorch::TensorImpl>(std::move(storage)));
+  simpletorch::Tensor tensor(std::make_shared<simpletorch::TensorImpl>(std::move(storage), c10::TypeMeta::fromScalarType(c10::ScalarType::Int)));
   simpletorch::Tensor tensor2 = tensor;
   simpletorch::Tensor tensor3 = tensor;
 }
@@ -47,7 +49,7 @@ TEST(AllocationTest, DataDestructor) {
 
   simpletorch::Storage storage(
       std::make_shared<simpletorch::StorageImpl>(100 * sizeof(int), &allocator));
-  simpletorch::Tensor* tensor = new simpletorch::Tensor(std::make_shared<simpletorch::TensorImpl>(std::move(storage)));
+  simpletorch::Tensor* tensor = new simpletorch::Tensor(std::make_shared<simpletorch::TensorImpl>(std::move(storage), c10::TypeMeta::fromScalarType(c10::ScalarType::Int)));
   simpletorch::Tensor* tensor2 = new simpletorch::Tensor(*tensor);
   simpletorch::Tensor* tensor3 = new simpletorch::Tensor(*tensor2);
   delete tensor;
