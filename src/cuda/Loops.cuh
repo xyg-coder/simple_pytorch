@@ -168,7 +168,7 @@ void gpu_kernel(simpletorch::TensorIterator& iter, const func_t& f) {
   TORCH_CHECK_WITH(NotImplementedError,
     iter.can_use_32bit_indexing(), "only 32bit indexing is supported");
 
-  TORCH_CHECK_WITH(NotImplementedError, !iter.is_contiguous(),
+  TORCH_CHECK_WITH(NotImplementedError, iter.is_contiguous(),
     "Currently only support contiguous tensor");
 
   return gpu_kernel_impl_nocast(iter, f);

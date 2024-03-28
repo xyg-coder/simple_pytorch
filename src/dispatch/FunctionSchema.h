@@ -8,7 +8,8 @@ namespace c10 {
 
 #define FUNCTION_SCHEMA_LIST_ITER(_)   \
   _(EMPTY, "EMPTY")                    \
-  _(FILL, "FILL")                    \
+  _(FILL, "FILL")                      \
+  _(FILL_TENSOR, "FILL_TENSOR")        \
   _(TEST, "TEST")                      \
   _(ALLOCATOR, "ALLOCATOR")            \
 

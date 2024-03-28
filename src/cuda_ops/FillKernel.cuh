@@ -21,8 +21,10 @@ struct FillFunctor {
 void fill_kernel_scalar_cuda(TensorIterator& iter, const c10::Scalar& value) {
 #define DEFINE_SCALAR_TYPE_CASE(type, name) \
 case c10::ScalarType::name: \
-  c10::cuda::gpu_kernel(iter, FillFunctor<type>(value.to<type>()));
+  c10::cuda::gpu_kernel(iter, FillFunctor<type>(value.to<type>()));\
+  break;
 
+auto idtype = iter.dtype();
 switch (iter.dtype()) {
   AT_FORALL_SCALAR_TYPES(DEFINE_SCALAR_TYPE_CASE)
   default:
@@ -33,7 +35,7 @@ switch (iter.dtype()) {
 }
 
 Tensor& fill_out(Tensor& self, const c10::Scalar& value) {
-  auto iter = TensorIteratorConfig().build();
+  auto iter = TensorIteratorConfig().add_output(self).build();
   fill_kernel_scalar_cuda(iter, value);
   return self;
 }

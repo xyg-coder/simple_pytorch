@@ -15,4 +15,4 @@ Tensor empty_cuda(
   std::optional<c10::Device> device_opt,
   std::optional<c10::MemoryFormat> memory_format_opt);
 
-} // namespace simpletorch::ops
+} // namespace simpletorch::impl
