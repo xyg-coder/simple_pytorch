@@ -121,5 +121,14 @@ struct arg_list_compare <typelist<T1, TypeList1...>, typelist<T2, TypeList2...>>
   static constexpr bool value = std::is_same_v<T1, T2> && arg_list_compare<typelist<TypeList1...>, typelist<TypeList2...>>::value;
 };
 
+// check if T1 is equal to T2 or inside T2 if T2 is a typelist
+template <class T1, class T2>
+struct arg_type_inside: std::is_same<T1, T2> {};
+
+template <class T1, class T2, class... TypeList1>
+struct arg_type_inside <T1, typelist<T2, TypeList1...>> {
+  static constexpr bool value = std::is_same_v<T1, T2> || arg_type_inside<T1, typelist<TypeList1...>>::value;
+};
+
 } // namespace typelist
 } // namespace c10::guts

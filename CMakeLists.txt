@@ -15,8 +15,10 @@ set(CMAKE_BUILD_TYPE Debug)
 # output compile_commands.json to be used by IDE
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  
 
-file(GLOB SOURCES src/*.cpp src/utils/*.cpp src/cuda/*.cpp src/dispatch/*.cpp src/cuda_ops/*.cpp
-  src/ops/*.cpp)  
+file(GLOB SOURCES src/*.cpp src/*.cu src/utils/*.cpp src/utils/*.cu
+  src/cuda/*.cpp src/cuda/*.cu src/dispatch/*.cpp src/dispatch/*.cu 
+  src/cuda_ops/*.cpp src/cuda_ops/*.cu
+  src/ops/*.cpp src/ops/*.cu)
 
 set(INCLUDES src)
 set (CMAKE_PREFIX_PATH "/usr/local/cuda" "${CMAKE_PREFIX_PATH}")  
@@ -33,6 +35,7 @@ add_executable(TestException ${SOURCES} example/test_exception.cpp)
 add_executable(TestAllocator ${SOURCES} example/test_allocator.cpp)
 add_executable(TestDispatcher ${SOURCES} example/test_dispatcher.cpp)
 add_executable(TestCudaKernel ${SOURCES} example/test_cuda_kernel.cu)
+add_executable(TestCudaFill ${SOURCES} example/test_cuda_fill.cpp)
 target_link_libraries (TestTensorExecutable ${ALL_LIBS})
 target_link_libraries (TestThreadPool ${ALL_LIBS})
 target_link_libraries (TestCudaContext ${ALL_LIBS})
@@ -40,6 +43,7 @@ target_link_libraries (TestException ${ALL_LIBS})
 target_link_libraries (TestAllocator ${ALL_LIBS})
 target_link_libraries (TestDispatcher ${ALL_LIBS})
 target_link_libraries (TestCudaKernel ${ALL_LIBS})
+target_link_libraries (TestCudaFill ${ALL_LIBS})
 
 target_include_directories(TestTensorExecutable PRIVATE ${INCLUDES})
 target_include_directories(TestThreadPool PRIVATE ${INCLUDES})
@@ -48,6 +52,7 @@ target_include_directories(TestException PRIVATE ${INCLUDES})
 target_include_directories (TestAllocator PRIVATE ${INCLUDES})
 target_include_directories (TestDispatcher PRIVATE ${INCLUDES})
 target_include_directories (TestCudaKernel PRIVATE ${INCLUDES})
+target_include_directories (TestCudaFill PRIVATE ${INCLUDES})
 
 # TEST
 include(FetchContent)
@@ -91,12 +96,18 @@ add_executable(
   ${SOURCES}
   test/vectorized_unrolled_kernel_test.cu
 )
+add_executable(
+  tensor_fill_test
+  ${SOURCES}
+  test/tensor_fill_test.cpp
+)
 target_include_directories(allocator_test PRIVATE ${INCLUDES})
 target_include_directories(cuda_allocator_test PRIVATE ${INCLUDES})
 target_include_directories(metaprogramming_test PRIVATE ${INCLUDES})
 target_include_directories(dispatcher_test PRIVATE ${INCLUDES})
 target_include_directories(library_test PRIVATE ${INCLUDES})
 target_include_directories(vectorized_unroll_kernel_test PRIVATE ${INCLUDES})
+target_include_directories(tensor_fill_test PRIVATE ${INCLUDES})
 target_link_libraries(
   allocator_test
   ${TEST_LIBS}
@@ -121,6 +132,10 @@ target_link_libraries(
   vectorized_unroll_kernel_test
   ${TEST_LIBS}
 )
+target_link_libraries(
+  tensor_fill_test
+  ${TEST_LIBS}
+)
 
 include(GoogleTest)
 gtest_discover_tests(allocator_test)
@@ -129,6 +144,7 @@ gtest_discover_tests(metaprogramming_test)
 gtest_discover_tests(dispatcher_test)
 gtest_discover_tests(library_test)
 gtest_discover_tests(vectorized_unroll_kernel_test)
+gtest_discover_tests(tensor_fill_test)
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 # Set CUDA compile options, this makes us able to use static expressions in cuda

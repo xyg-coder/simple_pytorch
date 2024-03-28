@@ -164,12 +164,12 @@ public:
   TypedOperatorHandle& operator=(const TypedOperatorHandle&) = default;
 
   Return call(Args... args) const {
-    return c10::Dispatcher::singleton().call(*this, args...);
+    return c10::Dispatcher::singleton().call<Return, Args...>(*this, std::forward<Args>(args)...);
   }
 
   Return redispatch(DispatchKeySet currentDispatchKeySet, Args... args) const {
-    return c10::Dispatcher::singleton().redispatch(
-      *this, currentDispatchKeySet, args...);
+    return c10::Dispatcher::singleton().redispatch<Return, Args...>(
+      *this, currentDispatchKeySet, std::forward<Args>(args)...);
   }
 private:
   explicit TypedOperatorHandle(std::list<OperatorDef>::iterator operator_iterator)

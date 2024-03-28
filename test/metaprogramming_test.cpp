@@ -119,6 +119,10 @@ static_assert(typelist::arg_list_compare<typelist::typelist<int, double>, typeli
 static_assert(!typelist::arg_list_compare<typelist::typelist<int, double>, typelist::typelist<int, bool>>::value);
 static_assert(!typelist::arg_list_compare<typelist::typelist<int, double>, typelist::typelist<int>>::value);
 
+static_assert(typelist::arg_type_inside<int, typelist::typelist<int, float>>::value);
+static_assert(typelist::arg_type_inside<int, typelist::typelist<int>>::value);
+static_assert(!typelist::arg_type_inside<int, typelist::typelist<float, double>>::value);
+
 //////////////////////
 // Metaprogramming.h
 //////////////////////
@@ -154,6 +158,11 @@ static_assert(
 static_assert(
   std::is_same<infer_function_traits<int(bool, bool)>::type::func_type,
     int(bool, bool)>::value
+);
+
+static_assert(
+  std::is_same<infer_function_traits<int(bool&, const bool&)>::type::func_type,
+    int(bool&, const bool&)>::value
 );
 
 static_assert(

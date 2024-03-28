@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TensorIterator.h"
 #include "cuda/CUDAException.h"
 #include "cuda/CUDAStream.h"
 #include "cuda/OffsetCalculator.cuh"
@@ -11,9 +12,7 @@
 #include "utils/Logging.h"
 #include "utils/Metaprogramming.h"
 #include <cstdint>
-#include <iostream>
 #include <limits>
-#include <tuple>
 #include <utility>
 
 namespace c10::cuda {
@@ -135,6 +134,44 @@ static inline void launch_unrolled_kernel(
   unrolled_element_wise_kernel<<<
     grid, num_threads(), 0, stream>>>(N, f, data, input_calc, output_calc, loader, storer);
   C10_CUDA_KERNEL_LAUNCH_CHECK();
+}
+
+template <typename func_t>
+void gpu_kernel_impl_nocast(simpletorch::TensorIterator& iter, const func_t& f) {
+  using traits = guts::infer_function_traits_t<func_t>;
+  using arg0_t = typename traits::return_type;
+  constexpr int ntensors = traits::number_of_parameters + 1;
+  TORCH_CHECK(iter.can_use_32bit_indexing());
+  TORCH_CHECK(iter.ninputs() == ntensors - 1);
+  TORCH_CHECK(iter.noutputs() == 1);
+  TORCH_CHECK(iter.is_contiguous());
+
+  std::array<char*, ntensors> data;
+  for (int i = 0; i < ntensors; ++i) {
+    data[i] = reinterpret_cast<char*>(iter.data_ptr(i));
+  }
+
+  launch_vectorized_kernel(iter.numel(), f, data);
+}
+
+template <typename func_t>
+void gpu_kernel(simpletorch::TensorIterator& iter, const func_t& f) {
+  for (int arg = 0; arg < iter.ntensors(); ++arg) {
+    TORCH_CHECK(iter.device(arg).is_cuda(), "argument ", arg, ": expected a CUDA device but found ",
+      iter.device(arg));
+  }
+
+  if (iter.numel() == 0) {
+    return;
+  }
+
+  TORCH_CHECK_WITH(NotImplementedError,
+    iter.can_use_32bit_indexing(), "only 32bit indexing is supported");
+
+  TORCH_CHECK_WITH(NotImplementedError, iter.is_contiguous(),
+    "Currently only support contiguous tensor");
+
+  return gpu_kernel_impl_nocast(iter, f);
 }
 
 } // namespace c10::cuda
